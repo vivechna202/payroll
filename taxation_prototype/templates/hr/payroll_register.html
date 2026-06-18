@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Payroll Register – TaxPro HRMS{% endblock %}
+{% block page_title %}Payroll Register{% endblock %}
+{% block page_subtitle %}Audit processed payrolls{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<form method="GET" action="{{ url_for('hr.payroll_register') }}" class="flex flex-wrap items-end gap-4 mb-6">
+  <div>
+    <label class="form-label">Employee ID</label>
+    <input type="text" name="employee_id" value="{{ emp_filter }}" placeholder="e.g. EMP001" class="form-input py-1.5 px-3 max-w-[150px]" />
+  </div>
+  <div>
+    <label class="form-label">Month</label>
+    <select name="month" class="form-input py-1.5 px-3 max-w-[120px]">
+      <option value="">All</option>
+      {% set month_names = ['January','February','March','April','May','June','July','August','September','October','November','December'] %}
+      {% for i in range(1, 13) %}
+      <option value="{{ i }}" {% if month_filter == i|string %}selected{% endif %}>{{ month_names[i-1] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Financial Year</label>
+    <input type="text" name="fy" value="{{ fy_filter or fy }}" class="form-input py-1.5 px-3 max-w-[150px]" />
+  </div>
+  <div>
+    <button type="submit" class="btn-primary py-1.5">Filter</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-border">
+          <th class="th-cell">Payroll ID</th>
+          <th class="th-cell">Emp ID</th>
+          <th class="th-cell">Month/FY</th>
+          <th class="th-cell">Processed At</th>
+          <th class="th-cell">Status</th>
+          <th class="th-cell text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border/50">
+        {% for p in payrolls %}
+        <tr class="hover:bg-white/[0.02] transition-colors">
+          <td class="td-cell font-mono text-xs text-brand-400">{{ p.payroll_id }}</td>
+          <td class="td-cell text-white">{{ p.employee_id }}</td>
+          <td class="td-cell text-slate-400">{{ p.month }} / {{ p.financial_year }}</td>
+          <td class="td-cell text-slate-400 text-xs">{{ p.processed_at[:10] }}</td>
+          <td class="td-cell">
+            <span class="pill-badge pill-green">{{ p.payroll_status }}</span>
+          </td>
+          <td class="td-cell text-right">
+            <button onclick="showDetails('{{ p.payroll_id }}', '{{ p.gross_salary }}', '{{ p.employee_pf }}', '{{ p.professional_tax }}', '{{ p.net_salary }}')" class="btn-secondary text-xs py-1 px-3">View Details</button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="td-cell text-center text-slate-500 py-6">No processed payrolls found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="details-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="card max-w-md w-full relative">
+    <button onclick="closeDetails()" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
+    <h3 class="text-lg font-bold text-white mb-4">Payroll Details: <span id="modal-id" class="text-brand-400 font-mono"></span></h3>
+    <div class="space-y-3">
+      <div class="flex justify-between border-b border-border pb-2">
+        <span class="text-slate-400">Gross Salary</span>
+        <span class="font-bold text-white">₹ <span id="modal-gross"></span></span>
+      </div>
+      <div class="flex justify-between border-b border-border pb-2">
+        <span class="text-slate-400">Employee PF</span>
+        <span class="font-bold text-red-300">- ₹ <span id="modal-pf"></span></span>
+      </div>
+      <div class="flex justify-between border-b border-border pb-2">
+        <span class="text-slate-400">Professional Tax</span>
+        <span class="font-bold text-red-300">- ₹ <span id="modal-pt"></span></span>
+      </div>
+      <div class="flex justify-between pt-2">
+        <span class="text-slate-300 font-medium">Net Salary</span>
+        <span class="font-bold text-emerald-300 text-lg">₹ <span id="modal-net"></span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showDetails(id, gross, pf, pt, net) {
+  document.getElementById('modal-id').innerText = id;
+  document.getElementById('modal-gross').innerText = gross;
+  document.getElementById('modal-pf').innerText = pf;
+  document.getElementById('modal-pt').innerText = pt;
+  document.getElementById('modal-net').innerText = net;
+  document.getElementById('details-modal').classList.remove('hidden');
+}
+function closeDetails() {
+  document.getElementById('details-modal').classList.add('hidden');
+}
+</script>
+{% endblock %}

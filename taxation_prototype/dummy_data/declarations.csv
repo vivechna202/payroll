@@ -1,0 +1,3 @@
+declaration_id,employee_id,financial_year,tax_regime,status,submitted_at,updated_at
+DEC-EMP001,EMP001,2024-25,OLD,SUBMITTED,2026-06-16T10:00:00,2026-06-16T10:00:00
+DEC-EMP002,EMP002,2024-25,NEW,SUBMITTED,2026-06-16T10:00:00,2026-06-16T10:00:00

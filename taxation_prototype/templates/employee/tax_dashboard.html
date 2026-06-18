@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Tax Dashboard – TaxPro HRMS{% endblock %}
+{% block page_title %}My Tax Dashboard{% endblock %}
+{% block page_subtitle %}FY {{ fy }} · {{ user.name }} ({{ user.employee_id }}){% endblock %}
+
+{% block content %}
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+  <div class="stat-card border-l-2 border-brand-500">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Annual Gross Income</p>
+    <p class="text-2xl font-bold text-white">₹ <span class="text-slate-300">{{ tax_summary.gross_income }}</span></p>
+    <p class="text-xs text-brand-400 mt-1">Based on latest payroll run</p>
+  </div>
+
+  <div class="stat-card border-l-2 border-emerald-500">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Regime</p>
+    <p class="text-2xl font-bold text-white">{{ tax_summary.regime }}</p>
+    <p class="text-xs text-emerald-400 mt-1">From submitted declaration</p>
+  </div>
+
+  <div class="stat-card border-l-2 border-indigo-500">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Est. Taxable Income</p>
+    <p class="text-2xl font-bold text-white">₹ <span class="text-slate-300">{{ tax_summary.taxable_income }}</span></p>
+    <p class="text-xs text-indigo-400 mt-1">Est Tax: ₹{{ tax_summary.tax_liability }}</p>
+  </div>
+
+  <div class="stat-card border-l-2 border-red-500">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">TDS Deducted (YTD)</p>
+    <p class="text-2xl font-bold text-white">₹ <span class="text-slate-300">{{ tax_summary.tds_deducted_ytd }}</span></p>
+    <p class="text-xs text-amber-400 mt-1">Remaining: ₹{{ tax_summary.remaining_tds }}</p>
+  </div>
+
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  <!-- Regime Comparison -->
+  <!-- Regime Comparison -->
+  <div class="card">
+    <h2 class="section-title mb-4">Old vs New Regime Projection</h2>
+    {% if regime_comparison.status == 'success' %}
+    <div class="space-y-4">
+      <div class="flex justify-between items-center p-3 rounded-xl bg-surface border border-border">
+        <div>
+          <p class="text-sm font-semibold text-white">Old Regime</p>
+          <p class="text-xs text-slate-400 mt-0.5">With all approved exemptions & deductions</p>
+        </div>
+        <p class="text-lg font-bold text-white">₹ {{ regime_comparison.old_regime_tax }}</p>
+      </div>
+      <div class="flex justify-between items-center p-3 rounded-xl bg-surface border border-border">
+        <div>
+          <p class="text-sm font-semibold text-white">New Regime</p>
+          <p class="text-xs text-slate-400 mt-0.5">Lower slabs, standard deduction only</p>
+        </div>
+        <p class="text-lg font-bold text-white">₹ {{ regime_comparison.new_regime_tax }}</p>
+      </div>
+      
+      <div class="mt-4 pt-4 border-t border-border flex items-start gap-3">
+        <svg class="w-5 h-5 text-brand-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Based on your current approved proofs and payroll data, the 
+          <strong class="text-white">{{ regime_comparison.recommended }} Regime</strong> 
+          appears to have a lower tax liability. Ensure all proofs are uploaded.
+        </p>
+      </div>
+    </div>
+    {% else %}
+    <div class="p-6 text-center text-slate-500 text-sm">
+      Insufficient data to compare regimes. Process payroll first.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Approved Deductions (Old Regime) -->
+  <div class="card">
+    <h2 class="section-title mb-4">Approved Deductions (Old Regime)</h2>
+    <div class="space-y-3">
+      {% for ded in tax_summary.approved_deductions %}
+      <div class="flex justify-between items-center border-b border-border pb-2 last:border-0 last:pb-0">
+        <p class="text-sm font-medium text-slate-300">{{ ded.section }}</p>
+        <p class="text-sm font-bold text-emerald-300">₹ {{ ded.amount }}</p>
+      </div>
+      {% else %}
+      <div class="p-6 text-center text-slate-500 text-sm">
+        No approved proofs found. Deductions only apply under the Old Regime.
+      </div>
+      {% endfor %}
+      {% if tax_summary.approved_deductions %}
+      <div class="pt-3 flex justify-between items-center">
+        <p class="text-xs text-amber-400">Excludes Standard Deduction & PF</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Payroll History -->
+  <div class="card lg:col-span-2">
+    <h2 class="section-title mb-4">Processed Payroll History (FY {{ fy }})</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border">
+            <th class="th-cell">Month</th>
+            <th class="th-cell">Gross Salary</th>
+            <th class="th-cell">PF Deducted</th>
+            <th class="th-cell">Prof. Tax</th>
+            <th class="th-cell">Net Salary</th>
+            <th class="th-cell">Processed Date</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border/50">
+          {% for p in payroll_history %}
+          <tr class="hover:bg-white/[0.02] transition-colors">
+            <td class="td-cell text-white font-medium">{{ p.month }}</td>
+            <td class="td-cell text-slate-300">₹ {{ p.gross_salary }}</td>
+            <td class="td-cell text-red-300">- ₹ {{ p.employee_pf }}</td>
+            <td class="td-cell text-red-300">- ₹ {{ p.professional_tax }}</td>
+            <td class="td-cell text-emerald-300 font-bold">₹ {{ p.net_salary }}</td>
+            <td class="td-cell text-slate-500 text-xs">{{ p.processed_at[:10] }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="td-cell text-center text-slate-500 py-4">No processed payrolls yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Monthly TDS Timeline -->
+  <div class="card lg:col-span-2">
+    <h2 class="section-title mb-4">Monthly TDS Deductions (FY {{ fy }})</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border">
+            <th class="th-cell">Month</th>
+            <th class="th-cell">Est. Annual Tax</th>
+            <th class="th-cell">Monthly TDS Deducted</th>
+            <th class="th-cell">Processed Date</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border/50">
+          {% for r in tax_summary.monthly_tds_history %}
+          <tr class="hover:bg-white/[0.02] transition-colors">
+            <td class="td-cell text-white font-medium">{{ r.month }}</td>
+            <td class="td-cell text-slate-300">₹ {{ r.estimated_annual_tax }}</td>
+            <td class="td-cell text-red-300 font-bold">- ₹ {{ r.monthly_tds }}</td>
+            <td class="td-cell text-slate-500 text-xs">{{ r.calculated_at[:10] }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="td-cell text-center text-slate-500 py-4">No TDS calculations processed yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

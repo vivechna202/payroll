@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Form 16 Download – TaxPro HRMS{% endblock %}
+{% block page_title %}Form 16 Download{% endblock %}
+{% block page_subtitle %}Annual TDS Certificate · Income Tax Act Section 203{% endblock %}
+
+{% block content %}
+
+<!-- FY Selector -->
+<div class="flex items-center gap-4 mb-6">
+  <label class="text-sm text-slate-400 font-medium">Financial Year:</label>
+  {% for fy_opt in ['2024-25', '2023-24', '2022-23'] %}
+  <a href="?fy={{ fy_opt }}"
+     class="px-4 py-2 rounded-xl text-sm font-medium transition-colors
+            {% if fy == fy_opt %}bg-brand-600 text-white{% else %}bg-card border border-border text-slate-300 hover:border-brand-500{% endif %}">
+    FY {{ fy_opt }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Extract Latest Record Timestamp for Part A/Part B downloads -->
+{% set latest_rec = form16_records[-1] if form16_records else None %}
+{% if latest_rec %}
+  {% set filename_parts = latest_rec.file_name.split('_') %}
+  {% set timestamp = filename_parts[-2] + '_' + filename_parts[-1].split('.')[0] %}
+{% else %}
+  {% set timestamp = '' %}
+{% endif %}
+
+<!-- Form 16 Cards -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+  <!-- Part A -->
+  <div class="card">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <h2 class="section-title">Form 16 – Part A</h2>
+        <p class="text-xs text-slate-400 mt-1">TDS Certificate issued by Employer</p>
+      </div>
+      <span class="pill-badge pill-blue">FY {{ fy }}</span>
+    </div>
+    <div class="space-y-3 mb-5">
+      <div class="flex items-center justify-between py-2 border-b border-border/50">
+        <div>
+          <p class="text-sm text-slate-300">Employer TAN</p>
+          <p class="text-xs text-slate-500">Tax Deduction Account Number</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}{{ form16_details.employer_tan }}{% else %}–{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-2 border-b border-border/50">
+        <div>
+          <p class="text-sm text-slate-300">Employee PAN</p>
+          <p class="text-xs text-slate-500">Permanent Account Number</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}{{ form16_details.pan }}{% else %}–{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-2 border-b border-border/50">
+        <div>
+          <p class="text-sm text-slate-300">Gross Salary</p>
+          <p class="text-xs text-slate-500">Annual Gross Salary</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}₹{{ "{:,.2f}".format(form16_details.gross_salary) }}{% else %}₹ –{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-2 border-b border-border/50">
+        <div>
+          <p class="text-sm text-slate-300">Total TDS Deducted</p>
+          <p class="text-xs text-slate-500">Annual TDS credit</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}₹{{ "{:,.2f}".format(form16_details.tds_credited) }}{% else %}₹ –{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-2 last:border-0">
+        <div>
+          <p class="text-sm text-slate-300">Certificate Period</p>
+          <p class="text-xs text-slate-500">Financial Year</p>
+        </div>
+        <p class="text-sm font-medium text-white">Apr {{ fy.split('-')[0] }} – Mar {{ '20' + fy.split('-')[1] }}</p>
+      </div>
+    </div>
+    {% if latest_rec %}
+    <a href="{{ url_for('employee.download_form16', filename='PartA_' + user.employee_id + '_' + fy + '_' + timestamp + '.csv') }}"
+       class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Download Part A CSV
+    </a>
+    {% else %}
+    <button disabled
+            class="w-full py-2.5 rounded-xl bg-surface border border-border text-slate-500
+                   text-sm font-medium flex items-center justify-center gap-2 cursor-not-allowed">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Part A Not Generated
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Part B -->
+  <div class="card">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <h2 class="section-title">Form 16 – Part B</h2>
+        <p class="text-xs text-slate-400 mt-1">Computation of Income & Tax</p>
+      </div>
+      <span class="pill-badge pill-blue">FY {{ fy }}</span>
+    </div>
+    <div class="space-y-3 mb-5">
+      <div class="flex items-center justify-between py-1.5 border-b border-border/30">
+        <div>
+          <p class="text-xs text-slate-300">Gross Salary (All Sources)</p>
+          <p class="text-[10px] text-slate-500">Aggregate basic and allowances</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}₹{{ "{:,.2f}".format(form16_details.gross_salary) }}{% else %}₹ –{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-1.5 border-b border-border/30">
+        <div>
+          <p class="text-xs text-slate-300">Allowances Exempt u/s 10</p>
+          <p class="text-[10px] text-slate-500">Exempt HRA (Old Regime only)</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}₹{{ "{:,.2f}".format(form16_details.exemptions_us10) }}{% else %}₹ –{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-1.5 border-b border-border/30">
+        <div>
+          <p class="text-xs text-slate-300">Balance (Gross – Exemptions)</p>
+          <p class="text-[10px] text-slate-500">Taxable Gross Salary</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}₹{{ "{:,.2f}".format(form16_details.balance_salary) }}{% else %}₹ –{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-1.5 border-b border-border/30">
+        <div>
+          <p class="text-xs text-slate-300">Standard & Professional Deductions</p>
+          <p class="text-[10px] text-slate-500">Standard (₹75k) + Prof Tax</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}₹{{ "{:,.2f}".format(form16_details.standard_deduction + form16_details.professional_tax) }}{% else %}₹ –{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-1.5 border-b border-border/30">
+        <div>
+          <p class="text-xs text-slate-300">Section 80 Deductions</p>
+          <p class="text-[10px] text-slate-500">Sec 80C, 80D, etc. (Old Regime)</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}₹{{ "{:,.2f}".format(form16_details.section_80c + form16_details.other_80_deductions) }}{% else %}₹ –{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-1.5 border-b border-border/30">
+        <div>
+          <p class="text-xs text-slate-300">Net Taxable Income</p>
+          <p class="text-[10px] text-slate-500">Salary after total deductions</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}₹{{ "{:,.2f}".format(form16_details.taxable_income) }}{% else %}₹ –{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-1.5 border-b border-border/30">
+        <div>
+          <p class="text-xs text-slate-300">Tax Payable + Cess</p>
+          <p class="text-[10px] text-slate-500">Total Tax computed u/s 115BAC</p>
+        </div>
+        <p class="text-sm font-medium text-brand-400 font-semibold">{% if form16_details %}₹{{ "{:,.2f}".format(form16_details.total_tax_liability) }}{% else %}₹ –{% endif %}</p>
+      </div>
+      <div class="flex items-center justify-between py-1.5 last:border-0">
+        <div>
+          <p class="text-xs text-slate-300">Regime Selected</p>
+          <p class="text-[10px] text-slate-500">Old or New Tax Regime</p>
+        </div>
+        <p class="text-sm font-medium text-white">{% if form16_details %}{{ form16_details.regime }}{% else %}–{% endif %}</p>
+      </div>
+    </div>
+    {% if latest_rec %}
+    <a href="{{ url_for('employee.download_form16', filename='PartB_' + user.employee_id + '_' + fy + '_' + timestamp + '.csv') }}"
+       class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Download Part B CSV
+    </a>
+    {% else %}
+    <button disabled
+            class="w-full py-2.5 rounded-xl bg-surface border border-border text-slate-500
+                   text-sm font-medium flex items-center justify-center gap-2 cursor-not-allowed">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Part B Not Generated
+    </button>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Download History -->
+<div class="card">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="section-title">Download History</h2>
+    <span class="pill-badge pill-blue">{{ form16_records | length }} Records</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-border">
+          <th class="th-cell">Form 16 ID</th>
+          <th class="th-cell">Financial Year</th>
+          <th class="th-cell">Generated On</th>
+          <th class="th-cell">Generated By</th>
+          <th class="th-cell">Filename</th>
+          <th class="th-cell">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border/50">
+        {% for r in form16_records %}
+        <tr class="hover:bg-white/[0.02] transition-colors">
+          <td class="td-cell font-mono text-xs text-brand-400">{{ r.generation_id }}</td>
+          <td class="td-cell">{{ r.financial_year }}</td>
+          <td class="td-cell text-slate-400 text-xs">{{ r.generated_at[:19].replace('T', ' ') }}</td>
+          <td class="td-cell text-slate-400 text-xs">{{ r.generated_by }}</td>
+          <td class="td-cell font-mono text-xs text-slate-300">{{ r.file_name }}</td>
+          <td class="td-cell">
+            <a href="{{ url_for('employee.download_form16', filename=r.file_name) }}"
+               class="px-3 py-1 rounded bg-brand-600 hover:bg-brand-500 text-white font-medium text-xs transition-colors inline-flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Download TXT
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="td-cell text-center py-8 text-slate-500">
+            <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            No Form 16 records available for FY {{ fy }}. Generated by HR after year-end.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+

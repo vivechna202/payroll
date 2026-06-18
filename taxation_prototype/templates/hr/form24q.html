@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Form 24Q - TaxPro HRMS{% endblock %}
+{% block page_title %}Form 24Q - Quarterly TDS Return{% endblock %}
+{% block page_subtitle %}Quarterly TDS Filing Management · FY {{ selected_fy }}{% endblock %}
+
+{% block content %}
+
+<!-- Configuration & Generation Control Card -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  
+  <!-- Selectors & Generator -->
+  <div class="card lg:col-span-2">
+    <h2 class="text-sm font-semibold text-slate-200 mb-4">Filing Return Parameters</h2>
+    <div class="flex flex-wrap items-end gap-4">
+      <div>
+        <label class="form-label">Quarter</label>
+        <div class="flex gap-2">
+          {% for q in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+          {% set q_desc = {'Q1': 'Apr–Jun', 'Q2': 'Jul–Sep', 'Q3': 'Oct–Dec', 'Q4': 'Jan–Mar'} %}
+          <a href="?quarter={{ q }}&fy={{ selected_fy }}"
+             class="px-4 py-2 rounded-xl text-sm font-medium transition-colors
+                    {% if selected_quarter == q %}bg-brand-600 text-white{% else %}bg-surface border border-border text-slate-300 hover:border-brand-500{% endif %}">
+            {{ q }}<span class="text-xs opacity-60 ml-1">{{ q_desc[q] }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Financial Year</label>
+        <select class="form-input w-36"
+                onchange="window.location.href='?quarter={{ selected_quarter }}&fy='+this.value">
+          {% for fy_opt in ['2024-25', '2023-24', '2022-23'] %}
+          <option value="{{ fy_opt }}" {% if fy_opt == selected_fy %}selected{% endif %}>{{ fy_opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <form method="POST" action="{{ url_for('hr.form24q') }}" class="flex-1">
+        <input type="hidden" name="quarter" value="{{ selected_quarter }}" />
+        <input type="hidden" name="fy" value="{{ selected_fy }}" />
+        <button type="submit" id="generate-form24q-btn" class="btn-primary w-full md:w-auto" {% if quarterly_summary.status == 'no_data' %}disabled opacity-50 cursor-not-allowed{% endif %}>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Generate Form 24Q Return
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Government FVU Path Configuration -->
+  <div class="card">
+    <h2 class="text-sm font-semibold text-slate-200 mb-2">Government FVU Utility Configuration</h2>
+    <p class="text-xs text-slate-400 mb-3">Specify the path to the Government-provided standalone FVU JAR tool on this system.</p>
+    <form method="POST" action="{{ url_for('hr.config_fvu') }}">
+      <div class="space-y-3">
+        <div>
+          <input type="text" name="fvu_path" class="form-input w-full text-xs font-mono" 
+                 value="{{ fvu_path }}" 
+                 placeholder="e.g. C:\NSDL_FVU\TDS_FVU_STANDALONE.jar" />
+          <p class="text-[10px] text-slate-500 mt-1">Set to <strong>MOCK</strong> or leave blank to simulate validation.</p>
+        </div>
+        <button type="submit" class="btn-secondary w-full py-1.5 text-xs">
+          Save Configuration
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+  <!-- Quarterly Summary -->
+  <div class="card">
+    <h2 class="section-title mb-4">
+      {{ selected_quarter }} Summary · FY {{ selected_fy }}
+    </h2>
+
+    {% set q_periods = {'Q1': 'April – June', 'Q2': 'July – September', 'Q3': 'October – December', 'Q4': 'January – March'} %}
+    <div class="px-4 py-3 rounded-xl bg-surface border border-border mb-4">
+      <p class="text-xs text-slate-400">Period: <span class="text-white font-medium">{{ q_periods[selected_quarter] }}</span></p>
+    </div>
+
+    <div class="space-y-3">
+      <div class="flex justify-between items-center py-2 border-b border-border/40">
+        <span class="text-sm text-slate-400">Total TDS Deducted</span>
+        <span class="text-sm font-medium text-white">₹{{ "{:,.2f}".format(quarterly_summary.total_tds_deducted | float) }}</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-border/40">
+        <span class="text-sm text-slate-400">Total TDS Deposited</span>
+        <span class="text-sm font-medium text-white">₹{{ "{:,.2f}".format(quarterly_summary.total_tds_deposited | float) }}</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-border/40">
+        <span class="text-sm text-slate-400">Outstanding Balance</span>
+        <span class="text-sm font-medium text-white">₹0.00</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-border/40">
+        <span class="text-sm text-slate-400">Number of Deductees</span>
+        <span class="text-sm font-medium text-white">{{ quarterly_summary.employee_count }}</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-border/40">
+        <span class="text-sm text-slate-400">Number of Challans</span>
+        <span class="text-sm font-medium text-white">{{ quarterly_summary.challan_count }}</span>
+      </div>
+      <div class="flex justify-between items-center py-2 last:border-0">
+        <span class="text-sm text-slate-400">Return Status</span>
+        <span class="text-sm font-medium">
+          {% if generated_files %}
+            <span class="text-emerald-400 font-semibold">Ready for Filing</span>
+          {% else %}
+            <span class="text-amber-400 font-semibold">Not Generated</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form Structure -->
+  <div class="card">
+    <h2 class="section-title mb-4">Form 24Q Structure Details</h2>
+    <div class="space-y-3">
+
+      <div class="p-4 rounded-xl bg-surface border border-border">
+        <div class="flex items-start justify-between mb-2">
+          <p class="text-sm font-semibold text-white">Annexure I (All Quarters)</p>
+          <span class="pill-badge pill-blue">Challan Details</span>
+        </div>
+        <ul class="text-xs text-slate-400 space-y-1">
+          <li>→ BSR Code of Bank Branch</li>
+          <li>→ Date of Deposit & Challan Serial Number</li>
+          <li>→ Monthly aggregate salary paid & tax deposited per employee</li>
+        </ul>
+      </div>
+
+      <div class="p-4 rounded-xl bg-surface border border-border">
+        <div class="flex items-start justify-between mb-2">
+          <p class="text-sm font-semibold text-white">Annexure II (Q4 Only)</p>
+          <span class="pill-badge pill-blue">Annual Salary Details</span>
+        </div>
+        <ul class="text-xs text-slate-400 space-y-1">
+          <li>→ Full annual salary breakup and exemptions (Section 10)</li>
+          <li>→ Approved investment declarations & Chapter VI-A deductions</li>
+          <li>→ Selected tax regime choice (Section 115BAC Option: Yes/No)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Review Aggregated TDS & Employee Data -->
+<div class="card mb-6">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="section-title">Review Aggregated TDS & Employee Data</h2>
+    <span class="pill-badge pill-blue">{{ employee_details | length }} Employees</span>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-border">
+          <th class="th-cell">Emp ID</th>
+          <th class="th-cell">Name</th>
+          <th class="th-cell">PAN</th>
+          <th class="th-cell">Department</th>
+          <th class="th-cell text-right">Gross Salary Paid (Qtr)</th>
+          <th class="th-cell text-right">TDS Deducted (Qtr)</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border/50">
+        {% for emp in employee_details %}
+        <tr class="hover:bg-white/[0.02] transition-colors">
+          <td class="td-cell font-semibold text-white">{{ emp.employee_id }}</td>
+          <td class="td-cell text-slate-300">{{ emp.name }}</td>
+          <td class="td-cell font-mono text-xs text-slate-400">{{ emp.pan }}</td>
+          <td class="td-cell text-slate-400">{{ emp.department }}</td>
+          <td class="td-cell text-right text-slate-300 font-mono">₹{{ "{:,.2f}".format(emp.gross_salary) }}</td>
+          <td class="td-cell text-right text-brand-400 font-semibold font-mono">₹{{ "{:,.2f}".format(emp.tds_deducted) }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="td-cell text-center py-8 text-slate-500">
+            No active payroll or TDS records found for this quarter.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if employee_details %}
+      <tfoot>
+        <tr class="border-t border-border bg-white/[0.01] font-semibold text-white">
+          <td colspan="4" class="td-cell text-right">Totals:</td>
+          {% set total_gross = employee_details | map(attribute='gross_salary') | sum %}
+          {% set total_tds = employee_details | map(attribute='tds_deducted') | sum %}
+          <td class="td-cell text-right font-mono">₹{{ "{:,.2f}".format(total_gross) }}</td>
+          <td class="td-cell text-right text-brand-400 font-mono">₹{{ "{:,.2f}".format(total_tds) }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<!-- Filing History Table -->
+<div class="card">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="section-title">Form 24Q Filing Return History</h2>
+    <span class="pill-badge pill-blue">{{ generated_files | length }} Filings</span>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-border">
+          <th class="th-cell">Generation ID</th>
+          <th class="th-cell">Return Details</th>
+          <th class="th-cell">TXT Return File</th>
+          <th class="th-cell">FVU Validation File</th>
+          <th class="th-cell">Status</th>
+          <th class="th-cell">Validation Message / Errors</th>
+          <th class="th-cell">Generated By / On</th>
+          <th class="th-cell text-right">Portal Link</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border/50">
+        {% for f in generated_files %}
+        <tr class="hover:bg-white/[0.02] transition-colors">
+          <td class="td-cell font-mono text-xs text-slate-300 font-semibold">{{ f.generation_id }}</td>
+          <td class="td-cell text-xs text-slate-300">{{ f.quarter }} · FY {{ f.financial_year }}</td>
+          <td class="td-cell">
+            <a href="{{ url_for('hr.download_form24q', filename=f.txt_file_name) }}"
+               class="px-2.5 py-1 rounded bg-brand-600 hover:bg-brand-500 text-white font-medium text-xs transition-colors inline-flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Download TXT
+            </a>
+          </td>
+          <td class="td-cell">
+            {% if f.validation_status == 'SUCCESS' and f.fvu_file_name != 'N/A' %}
+            <a href="{{ url_for('hr.download_form24q', filename=f.fvu_file_name) }}"
+               class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition-colors inline-flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+              Download FVU
+            </a>
+            {% else %}
+            <span class="text-xs text-slate-500">Not Available</span>
+            {% endif %}
+          </td>
+          <td class="td-cell">
+            {% if f.validation_status == 'SUCCESS' %}
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900/50 border border-emerald-700 text-emerald-400">
+              Valid
+            </span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-900/50 border border-rose-700 text-rose-400">
+              Invalid
+            </span>
+            {% endif %}
+          </td>
+          <td class="td-cell text-xs max-w-xs truncate" title="{{ f.validation_message }}">
+            <span class="text-slate-400">{{ f.validation_message }}</span>
+          </td>
+          <td class="td-cell text-xs text-slate-400">
+            <div>{{ f.generated_by }}</div>
+            <div class="text-[10px] opacity-60">{{ f.generated_at[:16].replace('T', ' ') }}</div>
+          </td>
+          <td class="td-cell text-right">
+            {% if f.validation_status == 'SUCCESS' %}
+            <a href="https://eportal.incometax.gov.in/" target="_blank"
+               class="px-2.5 py-1 rounded border border-emerald-700/60 text-emerald-400 hover:bg-emerald-900/20 text-xs transition-colors inline-flex items-center gap-1 font-semibold">
+              Open Protean Upload Portal
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+            {% else %}
+            <span class="text-xs text-slate-500 font-semibold">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="td-cell text-center py-10 text-slate-500">
+            <svg class="w-10 h-10 text-slate-700 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-sm">No Form 24Q filing history records found.</p>
+            {% if quarterly_summary.status != 'no_data' %}
+            <p class="text-xs mt-1 text-amber-400">Click "Generate Form 24Q Return" above to create files.</p>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

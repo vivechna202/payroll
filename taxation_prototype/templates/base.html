@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}TaxPro HRMS{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Employee Taxation Management System{% endblock %}" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            },
+            surface: '#0f172a',
+            card:    '#1e293b',
+            border:  '#334155',
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body class="h-full font-sans bg-surface text-slate-100 antialiased">
+
+{% if session.user %}
+<!-- ══════════════════════════════════════════════════
+     AUTHENTICATED LAYOUT
+══════════════════════════════════════════════════ -->
+<div class="flex h-full min-h-screen">
+
+  <!-- ── Sidebar ────────────────────────────────── -->
+  <aside id="sidebar"
+         class="w-64 flex-shrink-0 bg-card border-r border-border flex flex-col transition-all duration-300">
+
+    <!-- Logo -->
+    <div class="px-6 py-5 border-b border-border flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg">
+        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-sm font-bold text-white leading-tight">TaxPro</p>
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest">HRMS · FY {{ fy if fy else '2024-25' }}</p>
+      </div>
+    </div>
+
+    <!-- Role Badge -->
+    <div class="px-4 py-3 border-b border-border">
+      <div class="flex items-center gap-2 px-3 py-2 rounded-lg
+                  {% if session.user.role == 'hr' %}bg-emerald-900/40 border border-emerald-700/50
+                  {% else %}bg-brand-900/40 border border-brand-700/50{% endif %}">
+        <span class="w-2 h-2 rounded-full
+                     {% if session.user.role == 'hr' %}bg-emerald-400{% else %}bg-brand-400{% endif %}
+                     animate-pulse"></span>
+        <span class="text-xs font-semibold
+                     {% if session.user.role == 'hr' %}text-emerald-300{% else %}text-brand-300{% endif %}
+                     uppercase tracking-wider">
+          {{ session.user.role }} Portal
+        </span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+
+      <!-- Dashboard -->
+      <a href="{{ url_for('dashboard') }}"
+         class="nav-link {% if active_page == 'dashboard' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        Dashboard
+      </a>
+
+      <!-- Employee Portal -->
+      <div class="pt-3 pb-1">
+        <p class="px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Employee Portal</p>
+      </div>
+
+      <a href="{{ url_for('employee.tax_dashboard') }}"
+         class="nav-link {% if active_page == 'tax_dashboard' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        Tax Dashboard
+      </a>
+
+      <a href="{{ url_for('employee.investment_declaration') }}"
+         class="nav-link {% if active_page == 'investment_declaration' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Investment Declaration
+      </a>
+
+      <a href="{{ url_for('employee.proof_upload') }}"
+         class="nav-link {% if active_page == 'proof_upload' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+        Proof Upload
+      </a>
+
+      <a href="{{ url_for('employee.form16_download') }}"
+         class="nav-link {% if active_page == 'form16_download' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Form 16 Download
+      </a>
+
+      {% if session.user.role == 'hr' %}
+      <!-- HR Portal -->
+      <div class="pt-3 pb-1">
+        <p class="px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">HR Portal</p>
+      </div>
+
+      <a href="{{ url_for('hr.payroll_processing') }}"
+         class="nav-link {% if active_page == 'payroll_processing' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        Payroll Processing
+      </a>
+
+      <a href="{{ url_for('hr.payroll_register') }}"
+         class="nav-link {% if active_page == 'payroll_register' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Payroll Register
+      </a>
+
+      <a href="{{ url_for('hr.monthly_tds') }}"
+         class="nav-link {% if active_page == 'monthly_tds' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        </svg>
+        Monthly TDS
+      </a>
+
+      <a href="{{ url_for('hr.challan_details') }}"
+         class="nav-link {% if active_page == 'challan_details' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Challan Management
+      </a>
+
+      <a href="{{ url_for('hr.declarations') }}"
+         class="nav-link {% if active_page == 'hr_declarations' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Employee Declarations
+      </a>
+
+      <a href="{{ url_for('hr.proof_approval') }}"
+         class="nav-link {% if active_page == 'proof_approval' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Proof Approval
+      </a>
+
+      <a href="{{ url_for('hr.declaration_window') }}"
+         class="nav-link {% if active_page == 'declaration_window' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        Declaration Window
+      </a>
+
+      <a href="{{ url_for('hr.form24q') }}"
+         class="nav-link {% if active_page == 'form24q' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        </svg>
+        Form 24Q
+      </a>
+
+      <a href="{{ url_for('hr.form16') }}"
+         class="nav-link {% if active_page == 'form16' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Form 16
+      </a>
+      {% endif %}
+
+    </nav>
+
+    <!-- User Card + Role Switch -->
+    <div class="border-t border-border px-4 py-4 space-y-3">
+
+      <!-- Role Switch -->
+      <form method="POST" action="{{ url_for('auth.switch_role') }}" class="flex gap-2">
+        {% if session.user.role == 'hr' %}
+          <input type="hidden" name="role" value="employee" />
+          <button type="submit"
+                  class="flex-1 text-xs py-1.5 rounded-lg border border-brand-600 text-brand-300
+                         hover:bg-brand-600/20 transition-colors duration-200 font-medium">
+            Switch to Employee
+          </button>
+        {% else %}
+          <input type="hidden" name="role" value="hr" />
+          <button type="submit"
+                  class="flex-1 text-xs py-1.5 rounded-lg border border-emerald-600 text-emerald-300
+                         hover:bg-emerald-600/20 transition-colors duration-200 font-medium">
+            Switch to HR View
+          </button>
+        {% endif %}
+      </form>
+
+      <!-- User Info -->
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700
+                    flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+          {{ session.user.name[0] }}
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-white truncate">{{ session.user.name }}</p>
+          <p class="text-xs text-slate-400 truncate">{{ session.user.employee_id }}</p>
+        </div>
+        <a href="{{ url_for('auth.logout') }}"
+           title="Logout"
+           class="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main content ─────────────────────────── -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+    <!-- Top bar -->
+    <header class="h-14 flex items-center justify-between px-6 border-b border-border bg-card/50 backdrop-blur-sm">
+      <div>
+        <h1 class="text-sm font-semibold text-white">{% block page_title %}Dashboard{% endblock %}</h1>
+        <p class="text-xs text-slate-400">{% block page_subtitle %}Financial Year {{ fy if fy else '2024-25' }}{% endblock %}</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Flash indicator -->
+        <div id="flash-area" class="hidden"></div>
+      </div>
+    </header>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="px-6 pt-4 space-y-2">
+          {% for category, message in messages %}
+            <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+                        {% if category == 'success' %}bg-emerald-900/40 text-emerald-300 border border-emerald-700/50
+                        {% elif category == 'danger' %}bg-red-900/40 text-red-300 border border-red-700/50
+                        {% elif category == 'warning' %}bg-amber-900/40 text-amber-300 border border-amber-700/50
+                        {% else %}bg-brand-900/40 text-brand-300 border border-brand-700/50{% endif %}">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Page Content -->
+    <main class="flex-1 overflow-y-auto p-6">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+</div>
+
+{% else %}
+<!-- ── Unauthenticated layout ──────────────────── -->
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<!-- Global JS -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

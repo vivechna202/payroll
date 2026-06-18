@@ -1,0 +1,2 @@
+gross_salary,basic_salary,hra,special_allowance,other_allowances,exemptions_us10,balance_salary,standard_deduction,professional_tax,section_80c,other_80_deductions,total_deductions,taxable_income,tax_on_income,cess_4_pct,total_tax_liability,tds_credited,refund_or_payable
+261000.0,150000.0,60000.0,51000.0,0.0,0.0,261000.0,75000,600.0,18000.0,0.0,75600.0,185400.0,0.0,0.0,0.0,13747.5,-13747.5

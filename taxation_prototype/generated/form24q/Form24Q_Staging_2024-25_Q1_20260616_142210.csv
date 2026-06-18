@@ -1,0 +1,6 @@
+employee_id,name,pan,email,department,designation,quarter,financial_year,salary_paid,tds_deducted
+EMP001,Priya Sharma,ABCPS1234D,priya.sharma@company.com,Engineering,Software Engineer,Q1,2024-25,261000.00,13747.50
+EMP002,Arjun Mehta,BCDAM5678E,arjun.mehta@company.com,Finance,Financial Analyst,Q1,2024-25,193500.00,0.00
+EMP003,Sneha Iyer,CDPSI9012F,sneha.iyer@company.com,HR,HR Manager,Q1,2024-25,324999.00,23629.80
+EMP004,Karan Gupta,DEPKG3456G,karan.gupta@company.com,Sales,Sales Executive,Q1,2024-25,129000.00,0.00
+HR001,Rahul Verma,EFPRV7890H,rahul.verma@company.com,HR,HR Director,Q1,2024-25,433332.00,49194.60
