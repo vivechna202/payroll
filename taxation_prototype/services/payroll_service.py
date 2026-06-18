@@ -9,6 +9,7 @@ import uuid
 import pandas as pd
 from config import CSV_PAYROLL, CSV_EMPLOYEES, CSV_EMPLOYEE_SALARY, PF_PERCENTAGE, PROFESSIONAL_TAX
 from services.csv_service import read_csv, read_csv_filtered, csv_to_records, append_row, update_row, write_csv
+from services.tax_service import calculate_tds
 
 def get_employee_salary(employee_id: str) -> dict:
     """Return the current salary breakdown for an employee."""
@@ -38,8 +39,26 @@ def get_all_employee_salaries() -> list[dict]:
             active_emps.append(e)
     return active_emps
 
-def update_employee_salary(employee_id: str, basic: float, hra: float, special: float, other: float) -> bool:
-    """Update base salary parameters for an employee."""
+def update_employee_salary(employee_id: str, basic: float, hra: float, special: float, other: float, 
+                           tds_regime: str = "NEW", section_80C: float = 0, section_80D: float = 0, 
+                           hra_exemption: float = 0) -> bool:
+    """
+    Update base salary parameters for an employee with TDS regime support.
+    
+    Args:
+        employee_id: Employee ID
+        basic: Basic salary amount
+        hra: HRA amount
+        special: Special allowance amount
+        other: Other allowances amount
+        tds_regime: Tax regime ("OLD" or "NEW"), defaults to "NEW"
+        section_80C: Section 80C deduction amount (for OLD regime)
+        section_80D: Section 80D deduction amount (for OLD regime)
+        hra_exemption: HRA exemption amount (for OLD regime)
+    
+    Returns:
+        True if successful, False otherwise
+    """
     from datetime import date
     df = read_csv(CSV_EMPLOYEE_SALARY)
     mask = df["employee_id"] == employee_id
@@ -49,6 +68,10 @@ def update_employee_salary(employee_id: str, basic: float, hra: float, special: 
         df.at[idx, "hra"] = hra
         df.at[idx, "special_allowance"] = special
         df.at[idx, "other_allowances"] = other
+        df.at[idx, "tds_regime"] = tds_regime.upper() if tds_regime else "NEW"
+        df.at[idx, "section_80C"] = section_80C if section_80C else 0
+        df.at[idx, "section_80D"] = section_80D if section_80D else 0
+        df.at[idx, "hra_exemption"] = hra_exemption if hra_exemption else 0
         write_csv(CSV_EMPLOYEE_SALARY, df)
         return True
     else:
@@ -58,7 +81,11 @@ def update_employee_salary(employee_id: str, basic: float, hra: float, special: 
             "hra": hra,
             "special_allowance": special,
             "other_allowances": other,
-            "effective_from": date.today().isoformat()
+            "effective_from": date.today().isoformat(),
+            "tds_regime": tds_regime.upper() if tds_regime else "NEW",
+            "section_80C": section_80C if section_80C else 0,
+            "section_80D": section_80D if section_80D else 0,
+            "hra_exemption": hra_exemption if hra_exemption else 0
         })
         return True
 
@@ -70,6 +97,23 @@ def get_employee_payroll(employee_id: str) -> list[dict]:
     return df.to_dict(orient="records")
 
 def process_monthly_payroll(month: str, fy: str) -> dict:
+    """
+    Process monthly payroll with integrated TDS calculation.
+    
+    This function:
+    - Fetches employee salary data including TDS regime
+    - Reads tds_regime from CSV (defaults to NEW if missing)
+    - Calls calculate_tds() from tax_service
+    - Updates payroll calculation to include TDS
+    - Adds tds field in payroll CSV row
+    
+    Payroll calculation:
+        gross = basic + hra + special + other
+        pf = basic * PF_PERCENTAGE
+        pt = PROFESSIONAL_TAX
+        tds = calculate_tds(gross, regime, employee_data)
+        net = gross - pf - pt - tds
+    """
     emps = csv_to_records(CSV_EMPLOYEES)
     sals = csv_to_records(CSV_EMPLOYEE_SALARY)
     sal_map = {s["employee_id"]: s for s in sals}
@@ -102,10 +146,28 @@ def process_monthly_payroll(month: str, fy: str) -> dict:
         special = float(sal.get("special_allowance") or 0)
         other = float(sal.get("other_allowances") or 0)
         
+        # Get TDS regime (default to NEW if missing for backward compatibility)
+        regime = sal.get("tds_regime", "NEW")
+        if not regime or regime.strip() == "":
+            regime = "NEW"
+        
         gross = basic + hra + special + other
         pf = basic * (PF_PERCENTAGE / 100.0)
         pt = PROFESSIONAL_TAX
-        net = gross - pf - pt
+        
+        # Prepare employee deductions for TDS calculation
+        employee_deductions = {
+            "basic_salary": basic,
+            "section_80C": float(sal.get("section_80C", 0)),
+            "section_80D": float(sal.get("section_80D", 0)),
+            "hra_exemption": float(sal.get("hra_exemption", 0))
+        }
+        
+        # Calculate TDS using tax_service
+        tds = calculate_tds(gross, regime, employee_deductions)
+        
+        # Calculate net salary with TDS deduction
+        net = gross - pf - pt - tds
         
         row = {
             "payroll_id": f"PAY-{str(uuid.uuid4())[:8].upper()}",
@@ -119,6 +181,7 @@ def process_monthly_payroll(month: str, fy: str) -> dict:
             "gross_salary": f"{gross:.2f}",
             "employee_pf": f"{pf:.2f}",
             "professional_tax": f"{pt:.2f}",
+            "tds": f"{tds:.2f}",
             "net_salary": f"{net:.2f}",
             "payroll_status": "PROCESSED",
             "processed_at": datetime.now().isoformat()
@@ -138,11 +201,22 @@ def process_monthly_payroll(month: str, fy: str) -> dict:
     }
 
 def get_payroll_summary(month: str, fy: str) -> dict:
+    """
+    Get payroll summary including TDS totals.
+    
+    Returns summary with:
+    - total_gross: Total gross salary
+    - total_pf: Total PF deduction
+    - total_pt: Total professional tax
+    - total_tds: Total TDS deduction
+    - total_net: Total net salary
+    - employee_count: Number of employees
+    """
     df = read_csv(CSV_PAYROLL)
     if df.empty or "month" not in df.columns:
         return {
-            "total_gross": 0, "total_deductions": 0, "total_net": 0,
-            "total_tds": 0, "employee_count": 0, "month": month, "fy": fy
+            "total_gross": 0, "total_pf": 0, "total_pt": 0, "total_tds": 0, "total_net": 0,
+            "employee_count": 0, "month": month, "fy": fy
         }
         
     mask = (df["month"] == str(month)) & (df["financial_year"] == fy)
@@ -150,21 +224,29 @@ def get_payroll_summary(month: str, fy: str) -> dict:
     
     if f_df.empty:
         return {
-            "total_gross": 0, "total_deductions": 0, "total_net": 0,
-            "total_tds": 0, "employee_count": 0, "month": month, "fy": fy
+            "total_gross": 0, "total_pf": 0, "total_pt": 0, "total_tds": 0, "total_net": 0,
+            "employee_count": 0, "month": month, "fy": fy
         }
         
     gross = pd.to_numeric(f_df["gross_salary"]).sum()
     pf = pd.to_numeric(f_df["employee_pf"]).sum()
     pt = pd.to_numeric(f_df["professional_tax"]).sum()
+    
+    # Handle TDS column - if it doesn't exist (backward compatibility), treat as 0
+    if "tds" in f_df.columns:
+        tds = pd.to_numeric(f_df["tds"]).sum()
+    else:
+        tds = 0
+    
     net = pd.to_numeric(f_df["net_salary"]).sum()
     count = len(f_df)
     
     return {
         "total_gross": f"{gross:,.2f}",
-        "total_deductions": f"{(pf+pt):,.2f}",
+        "total_pf": f"{pf:,.2f}",
+        "total_pt": f"{pt:,.2f}",
+        "total_tds": f"{tds:,.2f}",
         "total_net": f"{net:,.2f}",
-        "total_tds": "0.00", # Phase 4 out of scope
         "employee_count": count,
         "month": month,
         "fy": fy,

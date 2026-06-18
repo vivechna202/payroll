@@ -65,13 +65,14 @@ ensure_csv(CSV_PROOFS, [
 ensure_csv(CSV_PAYROLL, [
     "payroll_id", "employee_id", "financial_year", "month",
     "basic_salary", "hra", "special_allowance", "other_allowances",
-    "gross_salary", "employee_pf", "professional_tax", "net_salary",
+    "gross_salary", "employee_pf", "professional_tax", "tds", "net_salary",
     "payroll_status", "processed_at",
 ])
 
 ensure_csv(CSV_EMPLOYEE_SALARY, [
     "employee_id", "basic_salary", "hra", "special_allowance",
-    "other_allowances", "effective_from"
+    "other_allowances", "effective_from",
+    "tds_regime", "section_80C", "section_80D", "hra_exemption"
 ])
 
 ensure_csv(CSV_TDS, [
@@ -177,11 +178,11 @@ if _emp_df.empty:
     pd.DataFrame(sample_employees).to_csv(CSV_EMPLOYEES, index=False)
     
     sample_salaries = [
-        {"employee_id": "EMP001", "basic_salary": 50000, "hra": 20000, "special_allowance": 17000, "other_allowances": 0, "effective_from": "2024-04-01"},
-        {"employee_id": "EMP002", "basic_salary": 37500, "hra": 15000, "special_allowance": 12000, "other_allowances": 0, "effective_from": "2024-04-01"},
-        {"employee_id": "EMP003", "basic_salary": 62500, "hra": 25000, "special_allowance": 20833, "other_allowances": 0, "effective_from": "2024-04-01"},
-        {"employee_id": "EMP004", "basic_salary": 25000, "hra": 10000, "special_allowance": 8000, "other_allowances": 0, "effective_from": "2024-04-01"},
-        {"employee_id": "HR001", "basic_salary": 83333, "hra": 33333, "special_allowance": 27778, "other_allowances": 0, "effective_from": "2024-04-01"},
+        {"employee_id": "EMP001", "basic_salary": 50000, "hra": 20000, "special_allowance": 17000, "other_allowances": 0, "effective_from": "2024-04-01", "tds_regime": "NEW", "section_80C": 0, "section_80D": 0, "hra_exemption": 0},
+        {"employee_id": "EMP002", "basic_salary": 37500, "hra": 15000, "special_allowance": 12000, "other_allowances": 0, "effective_from": "2024-04-01", "tds_regime": "NEW", "section_80C": 0, "section_80D": 0, "hra_exemption": 0},
+        {"employee_id": "EMP003", "basic_salary": 62500, "hra": 25000, "special_allowance": 20833, "other_allowances": 0, "effective_from": "2024-04-01", "tds_regime": "NEW", "section_80C": 0, "section_80D": 0, "hra_exemption": 0},
+        {"employee_id": "EMP004", "basic_salary": 25000, "hra": 10000, "special_allowance": 8000, "other_allowances": 0, "effective_from": "2024-04-01", "tds_regime": "NEW", "section_80C": 0, "section_80D": 0, "hra_exemption": 0},
+        {"employee_id": "HR001", "basic_salary": 83333, "hra": 33333, "special_allowance": 27778, "other_allowances": 0, "effective_from": "2024-04-01", "tds_regime": "NEW", "section_80C": 0, "section_80D": 0, "hra_exemption": 0},
     ]
     pd.DataFrame(sample_salaries).to_csv(CSV_EMPLOYEE_SALARY, index=False)
 

@@ -84,7 +84,14 @@ def payroll_edit(employee_id):
         hra = float(request.form.get("hra", 0))
         special = float(request.form.get("special_allowance", 0))
         other = float(request.form.get("other_allowances", 0))
-        update_employee_salary(employee_id, basic, hra, special, other)
+        
+        # TDS regime and deduction fields
+        tds_regime = request.form.get("tds_regime", "NEW")
+        section_80C = float(request.form.get("section_80C", 0))
+        section_80D = float(request.form.get("section_80D", 0))
+        hra_exemption = float(request.form.get("hra_exemption", 0))
+        
+        update_employee_salary(employee_id, basic, hra, special, other, tds_regime, section_80C, section_80D, hra_exemption)
         flash(f"Salary updated for {employee_id}.", "success")
         return redirect(url_for("hr.payroll_processing"))
         
@@ -386,10 +393,13 @@ def challan_details():
 @hr_required
 def challans_list():
     from services.challan_service import get_all_challans
-    from flask import jsonify
+    from flask import jsonify, make_response
     try:
         challans = get_all_challans()
-        return jsonify(challans)
+        response = make_response(jsonify(challans))
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        return response
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -401,45 +411,28 @@ def challans_add():
     from flask import jsonify, request
     try:
         data = request.get_json() or {}
-        quarter = data.get("quarter")
-        financial_year = data.get("financial_year")
-        bsr_code = data.get("bsr_code")
-        challan_serial_no = data.get("challan_serial_no")
-        challan_date = data.get("challan_date")
-        challan_amount = data.get("challan_amount")
-        
-        if not all([quarter, financial_year, bsr_code, challan_serial_no, challan_date, challan_amount]):
-            return jsonify({"status": "error", "message": "Missing required fields"}), 400
-            
         result = save_challan(data)
-        return jsonify(result)
+        status_code = 200 if result.get("status") == "success" else 400
+        return jsonify(result), status_code
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@hr_bp.route("/challans/update/<challan_id>", methods=["POST"])
+@hr_bp.route("/challans/update/<challan_id>", methods=["POST", "PUT"])
 @hr_required
 def challans_update(challan_id):
     from services.challan_service import edit_challan
     from flask import jsonify, request
     try:
         data = request.get_json() or {}
-        updates = {
-            "quarter": data.get("quarter"),
-            "financial_year": data.get("financial_year"),
-            "bsr_code": data.get("bsr_code"),
-            "challan_serial_no": data.get("challan_serial_no"),
-            "challan_date": data.get("challan_date"),
-            "challan_amount": data.get("challan_amount")
-        }
-        
-        result = edit_challan(challan_id, updates)
-        return jsonify(result)
+        result = edit_challan(challan_id, data)
+        status_code = 200 if result.get("status") == "success" else 400
+        return jsonify(result), status_code
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@hr_bp.route("/challans/delete/<challan_id>", methods=["POST"])
+@hr_bp.route("/challans/delete/<challan_id>", methods=["POST", "DELETE"])
 @hr_required
 def challans_delete(challan_id):
     from services.challan_service import delete_challan

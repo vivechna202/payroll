@@ -8,6 +8,7 @@
 <div class="card max-w-2xl">
   <form method="POST">
     <div class="space-y-4">
+      <!-- Basic Salary Structure -->
       <div>
         <label class="form-label">Basic Salary</label>
         <input type="number" step="0.01" name="basic_salary" class="form-input" value="{{ salary.get('basic_salary', 0) }}" required />
@@ -24,6 +25,36 @@
         <label class="form-label">Other Allowances</label>
         <input type="number" step="0.01" name="other_allowances" class="form-input" value="{{ salary.get('other_allowances', 0) }}" required />
       </div>
+      
+      <!-- TDS Regime Selection -->
+      <div>
+        <label class="form-label">TDS Regime</label>
+        <select name="tds_regime" id="tds_regime" class="form-input" required onchange="toggleDeductionFields()">
+          <option value="NEW" {% if salary.get('tds_regime', 'NEW') == 'NEW' %}selected{% endif %}>NEW REGIME</option>
+          <option value="OLD" {% if salary.get('tds_regime', 'NEW') == 'OLD' %}selected{% endif %}>OLD REGIME</option>
+        </select>
+      </div>
+      
+      <!-- Old Regime Deduction Fields (shown only when OLD regime is selected) -->
+      <div id="old_regime_fields" style="display: {% if salary.get('tds_regime', 'NEW') == 'OLD' %}block{% else %}none{% endif %};">
+        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h3 class="text-lg font-semibold mb-3">Old Regime Deductions</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="form-label">Section 80C Deduction (Max ₹1,50,000)</label>
+              <input type="number" step="0.01" name="section_80C" class="form-input" value="{{ salary.get('section_80C', 0) }}" placeholder="0.00" />
+            </div>
+            <div>
+              <label class="form-label">Section 80D Deduction (Health Insurance)</label>
+              <input type="number" step="0.01" name="section_80D" class="form-input" value="{{ salary.get('section_80D', 0) }}" placeholder="0.00" />
+            </div>
+            <div>
+              <label class="form-label">HRA Exemption</label>
+              <input type="number" step="0.01" name="hra_exemption" class="form-input" value="{{ salary.get('hra_exemption', 0) }}" placeholder="0.00" />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     
     <div class="mt-6 flex gap-3">
@@ -32,4 +63,17 @@
     </div>
   </form>
 </div>
+
+<script>
+function toggleDeductionFields() {
+    const regime = document.getElementById('tds_regime').value;
+    const oldFields = document.getElementById('old_regime_fields');
+    
+    if (regime === 'OLD') {
+        oldFields.style.display = 'block';
+    } else {
+        oldFields.style.display = 'none';
+    }
+}
+</script>
 {% endblock %}

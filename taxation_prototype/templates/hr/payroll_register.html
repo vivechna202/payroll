@@ -54,7 +54,7 @@
             <span class="pill-badge pill-green">{{ p.payroll_status }}</span>
           </td>
           <td class="td-cell text-right">
-            <button onclick="showDetails('{{ p.payroll_id }}', '{{ p.gross_salary }}', '{{ p.employee_pf }}', '{{ p.professional_tax }}', '{{ p.net_salary }}')" class="btn-secondary text-xs py-1 px-3">View Details</button>
+            <button onclick="showDetails('{{ p.payroll_id }}', '{{ p.gross_salary }}', '{{ p.employee_pf }}', '{{ p.professional_tax }}', '{{ p.tds|default("0.00") }}', '{{ p.net_salary }}')" class="btn-secondary text-xs py-1 px-3">View Details</button>
           </td>
         </tr>
         {% else %}
@@ -83,6 +83,10 @@
         <span class="text-slate-400">Professional Tax</span>
         <span class="font-bold text-red-300">- ₹ <span id="modal-pt"></span></span>
       </div>
+      <div class="flex justify-between border-b border-border pb-2">
+        <span class="text-slate-400">TDS (Income Tax)</span>
+        <span class="font-bold text-amber-300">- ₹ <span id="modal-tds"></span></span>
+      </div>
       <div class="flex justify-between pt-2">
         <span class="text-slate-300 font-medium">Net Salary</span>
         <span class="font-bold text-emerald-300 text-lg">₹ <span id="modal-net"></span></span>
@@ -92,11 +96,12 @@
 </div>
 
 <script>
-function showDetails(id, gross, pf, pt, net) {
+function showDetails(id, gross, pf, pt, tds, net) {
   document.getElementById('modal-id').innerText = id;
   document.getElementById('modal-gross').innerText = gross;
   document.getElementById('modal-pf').innerText = pf;
   document.getElementById('modal-pt').innerText = pt;
+  document.getElementById('modal-tds').innerText = tds;
   document.getElementById('modal-net').innerText = net;
   document.getElementById('details-modal').classList.remove('hidden');
 }

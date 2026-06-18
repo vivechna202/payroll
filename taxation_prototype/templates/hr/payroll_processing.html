@@ -37,20 +37,32 @@
 </div>
 
 <!-- Summary Tiles -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  {% set tiles = [
-    ('Total Gross', '₹ –', 'text-white', 'bg-brand-600/20'),
-    ('Total Deductions', '₹ –', 'text-red-300', 'bg-red-600/10'),
-    ('Total Net Pay', '₹ –', 'text-emerald-300', 'bg-emerald-600/10'),
-    ('Total TDS', '₹ –', 'text-amber-300', 'bg-amber-600/10'),
-  ] %}
-  {% for label, value, color, bg in tiles %}
-  <div class="stat-card {{ bg }}">
-    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{{ label }}</p>
-    <p class="text-2xl font-bold {{ color }}">{{ value }}</p>
-    <p class="text-xs text-amber-400 mt-1">For selected month/fy</p>
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+  <div class="stat-card bg-brand-600/20">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Total Gross</p>
+    <p class="text-2xl font-bold text-white">₹ {{ summary.total_gross }}</p>
+    <p class="text-xs text-amber-400 mt-1">{{ summary.employee_count }} employees</p>
   </div>
-  {% endfor %}
+  <div class="stat-card bg-blue-600/10">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Total PF</p>
+    <p class="text-2xl font-bold text-blue-300">₹ {{ summary.total_pf }}</p>
+    <p class="text-xs text-slate-400 mt-1">Employee contribution</p>
+  </div>
+  <div class="stat-card bg-purple-600/10">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Professional Tax</p>
+    <p class="text-2xl font-bold text-purple-300">₹ {{ summary.total_pt }}</p>
+    <p class="text-xs text-slate-400 mt-1">State tax</p>
+  </div>
+  <div class="stat-card bg-amber-600/10">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Total TDS</p>
+    <p class="text-2xl font-bold text-amber-300">₹ {{ summary.total_tds }}</p>
+    <p class="text-xs text-slate-400 mt-1">Income tax deducted</p>
+  </div>
+  <div class="stat-card bg-emerald-600/10">
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Total Net Pay</p>
+    <p class="text-2xl font-bold text-emerald-300">₹ {{ summary.total_net }}</p>
+    <p class="text-xs text-slate-400 mt-1">After all deductions</p>
+  </div>
 </div>
 
 <!-- Employee Payroll Table -->

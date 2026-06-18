@@ -74,7 +74,7 @@ PROFESSIONAL_TAX = 200.0
 # ──────────────────────────────────────────────
 # Tax Rules (Phase 5)
 # ──────────────────────────────────────────────
-STANDARD_DEDUCTION = 75000
+STANDARD_DEDUCTION = 50000
 
 TAX_SLABS_OLD = [
     {"limit": 250000, "rate": 0.0},

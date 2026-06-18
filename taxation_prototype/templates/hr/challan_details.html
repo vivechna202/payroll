@@ -317,7 +317,7 @@
   // Fetch all challans from backend on page load
   async function loadChallans() {
     try {
-      const response = await fetch("{{ url_for('hr.challans_list') }}");
+      const response = await fetch("{{ url_for('hr.challans_list') }}", { cache: "no-store" });
       if (!response.ok) throw new Error("Failed to fetch challan records");
       const data = await response.json();
       challanRecords = data.map(c => ({
@@ -334,41 +334,51 @@
     } catch (err) {
       console.error("Error loading challans:", err);
       const errList = document.getElementById("error-list");
-      errList.innerHTML = "<li>" + err.message + "</li>";
-      document.getElementById("error-alert").classList.remove("hidden");
+      if (errList) errList.innerHTML = "<li>" + err.message + "</li>";
+      const errAlert = document.getElementById("error-alert");
+      if (errAlert) errAlert.classList.remove("hidden");
     }
   }
 
   // In-modal error display
   function showModalError(messages) {
     const errList = document.getElementById("modal-error-list");
-    errList.innerHTML = "";
-    messages.forEach(msg => {
-      const li = document.createElement("li");
-      li.innerText = msg;
-      errList.appendChild(li);
-    });
-    document.getElementById("modal-error-alert").classList.remove("hidden");
+    if (errList) {
+      errList.innerHTML = "";
+      messages.forEach(msg => {
+        const li = document.createElement("li");
+        li.innerText = msg;
+        errList.appendChild(li);
+      });
+    }
+    const alertEl = document.getElementById("modal-error-alert");
+    if (alertEl) alertEl.classList.remove("hidden");
   }
 
   function clearModalErrors() {
-    document.getElementById("modal-error-alert").classList.add("hidden");
-    document.getElementById("modal-error-list").innerHTML = "";
+    const alertEl = document.getElementById("modal-error-alert");
+    if (alertEl) alertEl.classList.add("hidden");
+    const listEl = document.getElementById("modal-error-list");
+    if (listEl) listEl.innerHTML = "";
   }
 
   function clearAlerts() {
-    document.getElementById("success-alert").classList.add("hidden");
-    document.getElementById("error-alert").classList.add("hidden");
+    const successAlert = document.getElementById("success-alert");
+    if (successAlert) successAlert.classList.add("hidden");
+    const errorAlert = document.getElementById("error-alert");
+    if (errorAlert) errorAlert.classList.add("hidden");
   }
 
   // Modal open / close
   function openModal() {
-    document.getElementById("challan-modal-overlay").classList.remove("hidden");
+    const overlay = document.getElementById("challan-modal-overlay");
+    if (overlay) overlay.classList.remove("hidden");
     document.body.style.overflow = "hidden";
   }
 
   function closeModal() {
-    document.getElementById("challan-modal-overlay").classList.add("hidden");
+    const overlay = document.getElementById("challan-modal-overlay");
+    if (overlay) overlay.classList.add("hidden");
     document.body.style.overflow = "";
     clearModalErrors();
   }
@@ -459,15 +469,19 @@
     tbody.innerHTML = "";
 
     if (filteredRecords.length === 0) {
-      emptyRow.classList.remove("hidden");
-      document.getElementById("pagination-info").innerHTML = "Showing <span class='font-medium text-white'>0</span> to <span class='font-medium text-white'>0</span> of <span class='font-medium text-white'>0</span> records";
-      document.getElementById("btn-prev").disabled = true;
-      document.getElementById("btn-next").disabled = true;
-      document.getElementById("page-numbers").innerHTML = "";
+      if (emptyRow) emptyRow.classList.remove("hidden");
+      const pageInfo = document.getElementById("pagination-info");
+      if (pageInfo) pageInfo.innerHTML = "Showing <span class='font-medium text-white'>0</span> to <span class='font-medium text-white'>0</span> of <span class='font-medium text-white'>0</span> records";
+      const btnPrev = document.getElementById("btn-prev");
+      if (btnPrev) btnPrev.disabled = true;
+      const btnNext = document.getElementById("btn-next");
+      if (btnNext) btnNext.disabled = true;
+      const pageNumbers = document.getElementById("page-numbers");
+      if (pageNumbers) pageNumbers.innerHTML = "";
       return;
     }
 
-    emptyRow.classList.add("hidden");
+    if (emptyRow) emptyRow.classList.add("hidden");
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = Math.min(startIndex + pageSize, filteredRecords.length);
     const paginatedItems = filteredRecords.slice(startIndex, endIndex);
@@ -529,9 +543,10 @@
           throw new Error(result.message || "Failed to delete record");
         }
         const alertArea = document.getElementById("success-alert");
-        document.getElementById("success-message").innerText = "Challan record " + id + " has been deleted.";
-        alertArea.classList.remove("hidden");
-        setTimeout(() => alertArea.classList.add("hidden"), 3000);
+        const msgArea = document.getElementById("success-message");
+        if (msgArea) msgArea.innerText = "Challan record " + id + " has been deleted.";
+        if (alertArea) alertArea.classList.remove("hidden");
+        setTimeout(() => { if (alertArea) alertArea.classList.add("hidden") }, 3000);
         await loadChallans();
       } catch (err) {
         alert("Error: " + err.message);
@@ -599,9 +614,11 @@
       }
 
       closeModal();
-      document.getElementById("success-message").innerText = challanId ? "Challan record updated successfully!" : "New challan record created successfully!";
-      document.getElementById("success-alert").classList.remove("hidden");
-      setTimeout(() => document.getElementById("success-alert").classList.add("hidden"), 3000);
+      const msgArea = document.getElementById("success-message");
+      if (msgArea) msgArea.innerText = challanId ? "Challan record updated successfully!" : "New challan record created successfully!";
+      const alertArea = document.getElementById("success-alert");
+      if (alertArea) alertArea.classList.remove("hidden");
+      setTimeout(() => { if (alertArea) alertArea.classList.add("hidden") }, 3000);
       await loadChallans();
 
     } catch (err) {
