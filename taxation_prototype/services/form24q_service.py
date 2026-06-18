@@ -34,6 +34,7 @@ def ensure_form24q_history_csv():
         "financial_year",
         "txt_file_name",
         "fvu_file_name",
+        "err_file_name",
         "validation_status",
         "validation_message",
         "generated_by",
@@ -338,16 +339,18 @@ def run_mock_validation(txt_filepath: str) -> dict:
         return {
             "status": "SUCCESS",
             "message": "Validation successful. (Simulated)",
-            "fvu_file": os.path.basename(fvu_filepath)
+            "fvu_file": os.path.basename(fvu_filepath),
+            "err_file": "N/A"
         }
         
     except Exception as e:
         return {
             "status": "FAILED",
-            "message": f"Exception during validation: {str(e)}"
+            "message": f"Exception during validation: {str(e)}",
+            "err_file": "N/A"
         }
 
-def validate_with_fvu(txt_filepath: str) -> dict:
+def validate_with_fvu(txt_filepath: str, csi_filepath: str = None) -> dict:
     fvu_path = get_fvu_path()
     if not fvu_path or fvu_path.upper() == "MOCK" or not os.path.exists(fvu_path):
         # Fallback to mock validation
@@ -362,6 +365,8 @@ def validate_with_fvu(txt_filepath: str) -> dict:
     err_filepath = os.path.join(base_dir, f"{filename_sans_ext}.err")
     fvu_filepath = os.path.join(base_dir, f"{filename_sans_ext}.fvu")
     
+    csi_arg = csi_filepath if csi_filepath and os.path.exists(csi_filepath) else ""
+    
     # Standard NSDL command line invocation
     cmd = [
         "java",
@@ -370,7 +375,7 @@ def validate_with_fvu(txt_filepath: str) -> dict:
         txt_filepath,
         err_filepath,
         fvu_filepath,
-        "",
+        csi_arg,
         "0"
     ]
     
@@ -382,11 +387,14 @@ def validate_with_fvu(txt_filepath: str) -> dict:
             timeout=15
         )
         
+        err_filename = os.path.basename(err_filepath) if os.path.exists(err_filepath) else "N/A"
+        
         if os.path.exists(fvu_filepath) and os.path.getsize(fvu_filepath) > 0:
             return {
                 "status": "SUCCESS",
                 "message": "Validation successful. FVU file generated.",
-                "fvu_file": os.path.basename(fvu_filepath)
+                "fvu_file": os.path.basename(fvu_filepath),
+                "err_file": err_filename
             }
             
         error_msg = "FVU Validation failed."
@@ -400,14 +408,15 @@ def validate_with_fvu(txt_filepath: str) -> dict:
             
         return {
             "status": "FAILED",
-            "message": error_msg
+            "message": error_msg,
+            "err_file": err_filename
         }
     except Exception as e:
         res = run_mock_validation(txt_filepath)
         res["message"] = f"Real FVU failed to execute ({str(e)}). Fallback: " + res["message"]
         return res
 
-def generate_form24q(quarter: str, fy: str, generated_by: str) -> dict:
+def generate_form24q(quarter: str, fy: str, generated_by: str, csi_filepath: str = None) -> dict:
     os.makedirs(FORM24Q_FOLDER, exist_ok=True)
     ensure_form24q_history_csv()
     
@@ -547,6 +556,22 @@ def generate_form24q(quarter: str, fy: str, generated_by: str) -> dict:
     ay_clean = f"{ay_val}{str(ay_val+1)[2:]}" # e.g. 202526
     
     line_no = 1
+    
+    # Read real deductor details or fallback
+    from config import CSV_DEDUCTOR_MASTER
+    deductor_tan = "TAN-MOCK-HR001"
+    deductor_pan = "PAN-MOCK-HR001"
+    deductor_name = "Company Pvt Ltd"
+    deductor_addr = "Corporate Office"
+    if os.path.exists(CSV_DEDUCTOR_MASTER):
+        d_df = read_csv(CSV_DEDUCTOR_MASTER)
+        if not d_df.empty:
+            d_row = d_df.iloc[0]
+            deductor_tan = d_row.get("tan", deductor_tan)
+            deductor_pan = d_row.get("pan", deductor_pan)
+            deductor_name = d_row.get("company_name", deductor_name)
+            deductor_addr = d_row.get("address", deductor_addr)
+            
     with open(txt_filepath, "w", encoding="utf-8", newline="\r\n") as f:
         # File Header (FH)
         # FH^LineNo^SL^UploadType^GenDate^SeqNo^DeductorType^FormatVer^^
@@ -555,7 +580,7 @@ def generate_form24q(quarter: str, fy: str, generated_by: str) -> dict:
         
         # Batch Header (BH)
         # BH^LineNo^CDCount^DDCount^FormNo^TAN^PAN^Quarter^FY^AY^DeductorName^DeductorAddress^^
-        f.write(f"BH^{line_no}^{cd_count}^{dd_count}^24Q^TAN-MOCK-HR001^PAN-MOCK-HR001^{quarter}^{fy_clean}^{ay_clean}^Company Pvt Ltd^Corporate Office^^\n")
+        f.write(f"BH^{line_no}^{cd_count}^{dd_count}^24Q^{deductor_tan}^{deductor_pan}^{quarter}^{fy_clean}^{ay_clean}^{deductor_name}^{deductor_addr}^^\n")
         line_no += 1
         
         # Challan Details (CD) and Deductee Details (DD)
@@ -648,11 +673,12 @@ def generate_form24q(quarter: str, fy: str, generated_by: str) -> dict:
                     sd_serial += 1
                     
     # 5. Automatically Validate generated return using FVU utility
-    val_result = validate_with_fvu(txt_filepath)
+    val_result = validate_with_fvu(txt_filepath, csi_filepath=csi_filepath)
     
     validation_status = val_result["status"]
     validation_message = val_result["message"]
     fvu_filename = val_result.get("fvu_file", "N/A")
+    err_filename = val_result.get("err_file", "N/A")
     
     # 6. Save records to history
     generation_id = f"F24Q-{str(uuid.uuid4())[:8].upper()}"
@@ -662,6 +688,7 @@ def generate_form24q(quarter: str, fy: str, generated_by: str) -> dict:
         "financial_year": fy,
         "txt_file_name": txt_filename,
         "fvu_file_name": fvu_filename,
+        "err_file_name": err_filename,
         "validation_status": validation_status,
         "validation_message": validation_message,
         "generated_by": generated_by,
@@ -675,7 +702,7 @@ def generate_form24q(quarter: str, fy: str, generated_by: str) -> dict:
             "filename": txt_filename,
             "fvu_filename": fvu_filename,
             "filepath": txt_filepath,
-            "message": f"Form 24Q return files and staging dataset generated successfully. Validation SUCCESS."
+            "message": f"Form 24Q return files generated successfully. Validation SUCCESS."
         }
     else:
         return {
@@ -683,5 +710,5 @@ def generate_form24q(quarter: str, fy: str, generated_by: str) -> dict:
             "filename": txt_filename,
             "fvu_filename": "N/A",
             "filepath": txt_filepath,
-            "message": f"Form 24Q return files generated, but FVU validation FAILED: {validation_message}"
+            "message": f"Form 24Q return generated, but FVU validation FAILED: {validation_message}"
         }

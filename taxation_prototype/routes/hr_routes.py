@@ -286,7 +286,20 @@ def form24q():
     if request.method == "POST":
         quarter = request.form.get("quarter", selected_quarter)
         fy = request.form.get("fy", selected_fy)
-        result = generate_form24q(quarter, fy, user["name"])
+        
+        csi_filepath = None
+        if "csi_file" in request.files:
+            file = request.files["csi_file"]
+            if file and file.filename != "":
+                from werkzeug.utils import secure_filename
+                import os
+                from config import CSI_FOLDER
+                os.makedirs(CSI_FOLDER, exist_ok=True)
+                filename = secure_filename(file.filename)
+                csi_filepath = os.path.join(CSI_FOLDER, filename)
+                file.save(csi_filepath)
+                
+        result = generate_form24q(quarter, fy, user["name"], csi_filepath=csi_filepath)
         if result.get("status") == "success":
             flash(result.get("message"), "success")
         else:
