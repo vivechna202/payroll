@@ -1,0 +1,10 @@
+{
+    "encryption": "AES-256",
+    "password_hash": -3480193631198597431,
+    "metadata": {
+        "Employee Name": "Amit Verma",
+        "PAN": "KLMNO9012P",
+        "Financial Year": "2025-2026",
+        "Part Type": "B"
+    }
+}

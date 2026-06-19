@@ -1,0 +1,826 @@
+{% extends "base.html" %}
+
+{% block title %}Form 16 Processing – TaxPro HRMS{% endblock %}
+{% block meta_description %}HR-only Form 16 PDF bulk upload, decryption, and PAN matching dashboard{% endblock %}
+{% block page_title %}Form 16 Processing{% endblock %}
+{% block page_subtitle %}HR-Only · Bulk PDF Decryption & PAN Matching Pipeline · FY {{ fy }}{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* ── Form 16 Processing module styles ── */
+  .f16p-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+  .f16p-section-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.25rem;
+  }
+  .f16p-section-sub {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 1.25rem;
+  }
+  /* TAN input */
+  .tan-input {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: #0f172a;
+    border: 2px solid #334155;
+    color: #f1f5f9;
+    border-radius: 0.5rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .tan-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+  }
+  .tan-input.tan-valid {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+  }
+  .tan-input.tan-invalid {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+  }
+  /* Upload zone */
+  .upload-zone {
+    border: 2px dashed #334155;
+    border-radius: 0.875rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    transition: all 0.25s;
+    cursor: pointer;
+    background: #0f172a;
+  }
+  .upload-zone:hover,
+  .upload-zone.dragover {
+    border-color: #6366f1;
+    background: rgba(99,102,241,0.05);
+  }
+  .upload-zone.has-files {
+    border-color: #10b981;
+    background: rgba(16,185,129,0.04);
+  }
+  /* Status badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge-success  { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+  .badge-danger   { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+  .badge-warning  { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+  .badge-info     { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+  .badge-neutral  { background: rgba(100,116,139,0.15);color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+  .badge-ready    { background: rgba(16,185,129,0.18); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.35); }
+  /* Metric cards */
+  .metric-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid #334155;
+    border-radius: 0.875rem;
+    padding: 1.25rem 1.5rem;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .metric-card:hover { border-color: #4f46e5; transform: translateY(-1px); }
+  .metric-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+  .metric-label { font-size: 0.72rem; color: #64748b; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 0.3rem; }
+  /* Table styles */
+  .proc-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .proc-table th { padding: 0.75rem 1rem; text-align: left; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #334155; }
+  .proc-table td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(51,65,85,0.5); vertical-align: middle; }
+  .proc-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .proc-table tr:last-child td { border-bottom: none; }
+  /* Security notice */
+  .security-notice {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 0.625rem;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.75rem;
+    color: #fbbf24;
+    line-height: 1.5;
+  }
+  /* TAN active strip */
+  .tan-active-strip {
+    background: linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.04) 100%);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .tan-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: #10b981; animation: pulse 2s infinite; }
+  /* Step indicator */
+  .step-num {
+    width: 1.75rem; height: 1.75rem;
+    border-radius: 50%;
+    background: #4f46e5;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-num.done { background: #10b981; }
+  .step-num.inactive { background: #1e293b; border: 1px solid #334155; color: #475569; }
+  /* File list */
+  .file-pill {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: #0f172a; border: 1px solid #334155;
+    border-radius: 0.5rem; padding: 0.4rem 0.75rem;
+    font-size: 0.75rem; color: #94a3b8;
+  }
+  .file-pill .pill-remove {
+    color: #ef4444; cursor: pointer; font-size: 1rem;
+    line-height: 1; padding: 0 0.1rem;
+  }
+  /* Duplicate warning row */
+  .dup-row td { background: rgba(245,158,11,0.06) !important; }
+  /* Spinner */
+  .spinner {
+    width: 1.1rem; height: 1.1rem;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  /* Fade-in */
+  .fade-in { animation: fadeIn 0.4s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════
+   HR BADGE + PAGE HEADER
+══════════════════════════════════════════════════════ #}
+<div class="flex items-center justify-between mb-6 fade-in">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center shadow-lg">
+      <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+    </div>
+    <div>
+      <h2 class="text-base font-bold text-white">Form 16 Processing Pipeline</h2>
+      <p class="text-xs text-slate-500">Bulk decrypt → extract → match Part A &amp; Part B PDFs</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <span class="badge badge-info">
+      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      HR Only
+    </span>
+    {% if has_results %}
+    <a href="{{ url_for('form16_processing.download_log') }}"
+       class="badge badge-neutral hover:border-slate-400 transition-colors cursor-pointer no-underline">
+      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      Audit Log
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════
+   STEP PIPELINE INDICATOR
+══════════════════════════════════════════════════════ #}
+<div class="f16p-card mb-6 fade-in" style="animation-delay:0.05s">
+  <div class="flex items-center gap-0">
+
+    {# Step 1 #}
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <div class="step-num {{ 'done' if tan_set else '' }}">
+        {% if tan_set %}
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        {% else %}1{% endif %}
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-semibold {{ 'text-emerald-400' if tan_set else 'text-white' }}">Enter TAN</p>
+        <p class="text-[10px] text-slate-500 truncate">Validate &amp; store in session</p>
+      </div>
+    </div>
+
+    <div class="flex-shrink-0 px-2">
+      <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </div>
+
+    {# Step 2 #}
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <div class="step-num {{ 'done' if has_results else ('' if tan_set else 'inactive') }}">
+        {% if has_results %}
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        {% else %}2{% endif %}
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-semibold {{ 'text-emerald-400' if has_results else ('text-white' if tan_set else 'text-slate-500') }}">Upload PDFs</p>
+        <p class="text-[10px] text-slate-500 truncate">Decrypt with TAN</p>
+      </div>
+    </div>
+
+    <div class="flex-shrink-0 px-2">
+      <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </div>
+
+    {# Step 3 #}
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <div class="step-num {{ 'done' if has_results else 'inactive' }}">
+        {% if has_results %}
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        {% else %}3{% endif %}
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-semibold {{ 'text-emerald-400' if has_results else 'text-slate-500' }}">Review &amp; Match</p>
+        <p class="text-[10px] text-slate-500 truncate">PAN-based Part A/B matching</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+  {# ════════════════════════════════════════════
+     LEFT COLUMN: TAN + UPLOAD
+  ════════════════════════════════════════════ #}
+  <div class="xl:col-span-1 space-y-5">
+
+    {# ── TAN Setup Card ─────────────────────── #}
+    <div class="f16p-card fade-in" style="animation-delay:0.1s">
+      <p class="f16p-section-title flex items-center gap-2">
+        <svg class="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+        </svg>
+        Step 1 — TAN Setup
+      </p>
+      <p class="f16p-section-sub">Enter the deductor TAN used to encrypt the Form 16 PDFs</p>
+
+      {% if tan_set %}
+      {# TAN is active #}
+      <div class="tan-active-strip mb-4">
+        <div class="flex items-center gap-2">
+          <div class="tan-dot"></div>
+          <div>
+            <p class="text-xs font-bold text-emerald-300">TAN Active</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Stored in session memory only · Not saved anywhere</p>
+          </div>
+        </div>
+        <form method="POST" action="{{ url_for('form16_processing.clear_tan') }}">
+          <button type="submit" id="clear-tan-btn"
+                  class="text-xs px-3 py-1.5 rounded-lg border border-red-800 text-red-400 hover:bg-red-900/25 transition-colors font-semibold">
+            Clear TAN
+          </button>
+        </form>
+      </div>
+      {% else %}
+      {# TAN input form #}
+      <form method="POST" action="{{ url_for('form16_processing.set_tan') }}" id="tan-form">
+        <div class="mb-3">
+          <label for="tan-input" class="block text-xs font-semibold text-slate-300 mb-1.5">
+            TAN Number <span class="text-red-400">*</span>
+          </label>
+          <input type="text" id="tan-input" name="tan"
+                 class="tan-input" maxlength="10"
+                 placeholder="e.g. BLRP12345Q"
+                 autocomplete="off" spellcheck="false"
+                 oninput="validateTanInput(this)" />
+          <div id="tan-hint" class="text-[10px] text-slate-500 mt-1.5">
+            Format: 4 letters · 5 digits · 1 letter (all uppercase)
+          </div>
+          <div id="tan-error" class="text-[10px] text-red-400 mt-1 hidden"></div>
+        </div>
+        <button type="submit" id="tan-submit-btn"
+                class="w-full py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold
+                       transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          Validate &amp; Set TAN
+        </button>
+      </form>
+      {% endif %}
+
+      <div class="security-notice mt-4">
+        <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <span>TAN is stored <strong>only in your current browser session</strong>. It is never written to any file, database, or log. It will be cleared when you log out or click "Clear TAN".</span>
+      </div>
+    </div>
+
+    {# ── Upload Card ────────────────────────── #}
+    {% if tan_set %}
+    <div class="f16p-card fade-in" style="animation-delay:0.15s">
+      <p class="f16p-section-title flex items-center gap-2">
+        <svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+        Step 2 — Bulk Upload
+      </p>
+      <p class="f16p-section-sub">Upload Part A &amp; Part B PDFs (or a ZIP archive). Decryption uses your session TAN.</p>
+
+      <form method="POST" action="{{ url_for('form16_processing.upload') }}"
+            enctype="multipart/form-data" id="upload-form">
+
+        {# Drop zone #}
+        <div class="upload-zone mb-4" id="drop-zone"
+             onclick="document.getElementById('pdf-file-input').click()">
+          <svg class="w-10 h-10 text-slate-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p class="text-sm font-semibold text-slate-300" id="drop-label">Click or drag &amp; drop files here</p>
+          <p class="text-xs text-slate-500 mt-1">PDF files or a single ZIP archive · Max 50 MB</p>
+        </div>
+
+        <input type="file" id="pdf-file-input" name="pdf_files"
+               multiple accept=".pdf,.zip" class="hidden"
+               onchange="handleFileSelect(this)" />
+
+        {# File preview list #}
+        <div id="file-list" class="space-y-1.5 mb-4 hidden"></div>
+
+        <button type="submit" id="upload-btn"
+                class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold
+                       transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+          </svg>
+          <span id="upload-btn-text">Decrypt &amp; Process</span>
+        </button>
+      </form>
+    </div>
+    {% else %}
+    {# Upload locked #}
+    <div class="f16p-card fade-in opacity-50" style="animation-delay:0.15s">
+      <div class="text-center py-8">
+        <svg class="w-10 h-10 text-slate-700 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <p class="text-sm font-semibold text-slate-400">Upload Locked</p>
+        <p class="text-xs text-slate-600 mt-1">Enter and validate TAN first</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Clear Session ──────────────────────── #}
+    {% if has_results or tan_set %}
+    <form method="POST" action="{{ url_for('form16_processing.clear_session_data') }}"
+          class="fade-in" style="animation-delay:0.2s"
+          onsubmit="return confirm('This will wipe all processing data and clear your TAN from session. Continue?')">
+      <button type="submit" id="clear-session-btn"
+              class="w-full py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold
+                     hover:border-red-800 hover:text-red-400 hover:bg-red-900/10 transition-all duration-200 flex items-center justify-center gap-2">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+        Clear All &amp; Start Over
+      </button>
+    </form>
+    {% endif %}
+
+  </div>{# end left column #}
+
+  {# ════════════════════════════════════════════
+     RIGHT COLUMN: RESULTS
+  ════════════════════════════════════════════ #}
+  <div class="xl:col-span-2 space-y-5">
+
+    {% if has_results and dashboard_data %}
+    {% set summary = dashboard_data.summary %}
+    {% set processed = dashboard_data.processed %}
+    {% set matched = dashboard_data.matched %}
+
+    {# ── Summary Metric Cards ──────────────── #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 fade-in" style="animation-delay:0.12s">
+
+      <div class="metric-card">
+        <div class="metric-value text-white">{{ summary.total_files }}</div>
+        <div class="metric-label">Files Uploaded</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-value text-emerald-400">{{ summary.decrypted }}</div>
+        <div class="metric-label">Decrypted</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-value text-red-400">{{ summary.failed_decrypt }}</div>
+        <div class="metric-label">Wrong Password</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-value text-violet-400">{{ summary.total_pans }}</div>
+        <div class="metric-label">Unique PANs</div>
+      </div>
+
+    </div>
+
+    {# ── PAN Match Summary Pills ────────────── #}
+    <div class="grid grid-cols-3 gap-3 fade-in" style="animation-delay:0.15s">
+      <div class="f16p-card text-center">
+        <div class="text-2xl font-bold text-emerald-400">{{ summary.ready }}</div>
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Ready</div>
+        <div class="text-[10px] text-slate-600 mt-0.5">Part A + B matched</div>
+      </div>
+      <div class="f16p-card text-center">
+        <div class="text-2xl font-bold text-amber-400">{{ summary.missing_part_a }}</div>
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Missing Part A</div>
+        <div class="text-[10px] text-slate-600 mt-0.5">Only Part B found</div>
+      </div>
+      <div class="f16p-card text-center">
+        <div class="text-2xl font-bold text-orange-400">{{ summary.missing_part_b }}</div>
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Missing Part B</div>
+        <div class="text-[10px] text-slate-600 mt-0.5">Only Part A found</div>
+      </div>
+    </div>
+
+    {# ── Per-File Decryption Status Table ─── #}
+    <div class="f16p-card fade-in" style="animation-delay:0.18s">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <p class="f16p-section-title">File Processing Status</p>
+          <p class="f16p-section-sub mb-0">Decryption &amp; metadata extraction result per file</p>
+        </div>
+        <span class="badge badge-neutral">{{ processed | length }} file(s)</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="proc-table">
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Decryption</th>
+              <th>PAN</th>
+              <th>Employee</th>
+              <th>FY</th>
+              <th>Part</th>
+              <th>Extraction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rec in processed %}
+            <tr>
+              <td class="font-mono text-[11px] text-brand-300 max-w-[150px] truncate" title="{{ rec.filename }}">
+                {{ rec.filename | truncate(28, True, '…') }}
+              </td>
+              <td>
+                {% if rec.decryption_status == 'decrypted' %}
+                  <span class="badge badge-success">✓ Decrypted</span>
+                {% elif rec.decryption_status == 'not_encrypted' %}
+                  <span class="badge badge-info">Not Encrypted</span>
+                {% elif rec.decryption_status == 'wrong_password' %}
+                  <span class="badge badge-danger">Wrong TAN</span>
+                {% elif rec.decryption_status == 'corrupted' %}
+                  <span class="badge badge-warning">Corrupted</span>
+                {% else %}
+                  <span class="badge badge-neutral">{{ rec.decryption_status }}</span>
+                {% endif %}
+              </td>
+              <td class="font-mono text-xs text-slate-300">{{ rec.pan or '—' }}</td>
+              <td class="text-slate-300 text-xs">{{ rec.employee_name or '—' }}</td>
+              <td class="text-slate-400 text-xs">{{ rec.financial_year or '—' }}</td>
+              <td>
+                {% if rec.part_type == 'A' %}
+                  <span class="badge badge-info">Part A</span>
+                {% elif rec.part_type == 'B' %}
+                  <span class="badge badge-success">Part B</span>
+                {% elif rec.part_type == 'UNKNOWN' %}
+                  <span class="badge badge-neutral">Unknown</span>
+                {% else %}
+                  <span class="badge badge-neutral">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if rec.extraction_status == 'extracted' %}
+                  <span class="badge badge-success">Extracted</span>
+                {% elif rec.extraction_status == 'failed' %}
+                  <span class="badge badge-danger" title="{{ rec.error or '' }}">Failed</span>
+                {% elif rec.extraction_status == 'skipped' %}
+                  <span class="badge badge-neutral">Skipped</span>
+                {% else %}
+                  <span class="badge badge-neutral">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center py-8 text-slate-500 text-sm">
+                No files processed yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# ── HR Review Dashboard (PAN Matching) ── #}
+    <div class="f16p-card fade-in" style="animation-delay:0.22s">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <p class="f16p-section-title">HR Review Dashboard — PAN Matching</p>
+          <p class="f16p-section-sub mb-0">Automatically matched Part A &amp; Part B by PAN</p>
+        </div>
+        <span class="badge badge-neutral">{{ matched | length }} PAN(s)</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="proc-table">
+          <thead>
+            <tr>
+              <th>PAN</th>
+              <th>Employee Name</th>
+              <th>FY</th>
+              <th>Part A</th>
+              <th>Part B</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in matched %}
+            <tr class="{{ 'dup-row' if m.duplicate_warning }}">
+              <td class="font-mono text-xs font-bold text-white">
+                {{ m.pan }}
+                {% if m.duplicate_warning %}
+                <span class="badge badge-warning ml-1" title="Multiple files found for same PAN">Dup!</span>
+                {% endif %}
+              </td>
+              <td class="text-slate-300 text-xs">{{ m.employee_name }}</td>
+              <td class="text-slate-400 text-xs">{{ m.financial_year }}</td>
+              <td>
+                {% if m.has_part_a %}
+                  <span class="badge badge-success">
+                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    Yes
+                  </span>
+                {% else %}
+                  <span class="badge badge-danger">
+                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    No
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if m.has_part_b %}
+                  <span class="badge badge-success">
+                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    Yes
+                  </span>
+                {% else %}
+                  <span class="badge badge-danger">
+                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    No
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if m.status == 'Ready' %}
+                  <span class="badge badge-ready">
+                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                    Ready
+                  </span>
+                {% elif m.status == 'Missing Part A' %}
+                  <span class="badge badge-warning">⚠ Missing Part A</span>
+                {% elif m.status == 'Missing Part B' %}
+                  <span class="badge badge-warning">⚠ Missing Part B</span>
+                {% else %}
+                  <span class="badge badge-danger">Missing Both</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="text-center py-10 text-slate-500">
+                <svg class="w-8 h-8 text-slate-700 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="text-sm">No matched records yet.</p>
+                <p class="text-xs mt-1">Upload PDFs with extractable metadata to see PAN matching results.</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if matched %}
+      <div class="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-3 text-center">
+        <div>
+          <span class="badge badge-ready">Ready: {{ summary.ready }}</span>
+        </div>
+        <div>
+          <span class="badge badge-warning">Missing Part A: {{ summary.missing_part_a }}</span>
+        </div>
+        <div>
+          <span class="badge badge-warning">Missing Part B: {{ summary.missing_part_b }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    {% else %}
+    {# ── Empty state ─────────────────────────── #}
+    <div class="f16p-card fade-in flex flex-col items-center justify-center py-20 text-center" style="animation-delay:0.1s">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-900/60 to-indigo-900/60 border border-violet-800/40 flex items-center justify-center mb-5">
+        <svg class="w-8 h-8 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </div>
+      <h3 class="text-base font-bold text-white mb-2">No Processing Results Yet</h3>
+      {% if not tan_set %}
+      <p class="text-sm text-slate-400 max-w-xs">
+        Start by entering the deductor TAN in the panel on the left, then upload your Form 16 PDFs.
+      </p>
+      {% else %}
+      <p class="text-sm text-slate-400 max-w-xs">
+        TAN is set. Upload your Form 16 Part A and Part B PDFs (or a ZIP archive) to begin processing.
+      </p>
+      {% endif %}
+      <div class="mt-6 flex flex-wrap gap-3 justify-center text-xs text-slate-500">
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Decrypts with TAN
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span>Extracts PAN + metadata
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>Matches Part A &amp; B
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>{# end right column #}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── TAN live validation ──────────────────────────────────
+const TAN_REGEX = /^[A-Z]{4}[0-9]{5}[A-Z]{1}$/;
+
+function validateTanInput(input) {
+  const val = input.value.toUpperCase().trim();
+  input.value = val;
+  const submitBtn = document.getElementById('tan-submit-btn');
+  const hintEl    = document.getElementById('tan-hint');
+  const errEl     = document.getElementById('tan-error');
+
+  if (val.length === 0) {
+    input.classList.remove('tan-valid', 'tan-invalid');
+    submitBtn.disabled = true;
+    hintEl.classList.remove('hidden');
+    errEl.classList.add('hidden');
+    return;
+  }
+
+  if (val.length < 10) {
+    input.classList.remove('tan-valid');
+    input.classList.add('tan-invalid');
+    errEl.textContent = `${val.length}/10 characters — keep typing`;
+    errEl.classList.remove('hidden');
+    hintEl.classList.add('hidden');
+    submitBtn.disabled = true;
+    return;
+  }
+
+  if (TAN_REGEX.test(val)) {
+    input.classList.remove('tan-invalid');
+    input.classList.add('tan-valid');
+    errEl.classList.add('hidden');
+    hintEl.classList.remove('hidden');
+    hintEl.textContent = '✓ TAN format looks correct';
+    hintEl.style.color = '#34d399';
+    submitBtn.disabled = false;
+  } else {
+    input.classList.remove('tan-valid');
+    input.classList.add('tan-invalid');
+    errEl.textContent = 'Invalid format. Must be 4 uppercase letters, 5 digits, 1 uppercase letter.';
+    errEl.classList.remove('hidden');
+    hintEl.classList.add('hidden');
+    submitBtn.disabled = true;
+  }
+}
+
+// ── File upload UX ───────────────────────────────────────
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+let selectedFiles = [];
+
+function handleFileSelect(input) {
+  selectedFiles = Array.from(input.files);
+  renderFileList();
+}
+
+function renderFileList() {
+  const listEl  = document.getElementById('file-list');
+  const dropEl  = document.getElementById('drop-zone');
+  const labelEl = document.getElementById('drop-label');
+  const btnEl   = document.getElementById('upload-btn');
+
+  if (selectedFiles.length === 0) {
+    listEl.classList.add('hidden');
+    listEl.innerHTML = '';
+    dropEl.classList.remove('has-files');
+    labelEl.textContent = 'Click or drag & drop files here';
+    btnEl.disabled = true;
+    return;
+  }
+
+  dropEl.classList.add('has-files');
+  labelEl.textContent = `${selectedFiles.length} file(s) selected`;
+  btnEl.disabled = false;
+  btnEl.querySelector('#upload-btn-text').textContent = `Decrypt & Process ${selectedFiles.length} File(s)`;
+
+  listEl.innerHTML = selectedFiles.map((f, i) => `
+    <div class="file-pill" id="pill-${i}">
+      <svg class="w-3.5 h-3.5 text-brand-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+      </svg>
+      <span class="truncate flex-1 text-slate-300">${f.name}</span>
+      <span class="text-[10px] text-slate-500 flex-shrink-0">${formatBytes(f.size)}</span>
+      <span class="pill-remove flex-shrink-0" onclick="removeFile(${i})" title="Remove">&times;</span>
+    </div>
+  `).join('');
+  listEl.classList.remove('hidden');
+}
+
+function removeFile(index) {
+  selectedFiles.splice(index, 1);
+  // Rebuild the file input (can't directly mutate FileList)
+  const input = document.getElementById('pdf-file-input');
+  const dt = new DataTransfer();
+  selectedFiles.forEach(f => dt.items.add(f));
+  input.files = dt.files;
+  renderFileList();
+}
+
+// Drag & drop
+const dropZone = document.getElementById('drop-zone');
+if (dropZone) {
+  ['dragenter', 'dragover'].forEach(evt => {
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    const input = document.getElementById('pdf-file-input');
+    const dt = new DataTransfer();
+    Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+    input.files = dt.files;
+    selectedFiles = Array.from(input.files);
+    renderFileList();
+  });
+}
+
+// Show spinner on upload submit
+const uploadForm = document.getElementById('upload-form');
+if (uploadForm) {
+  uploadForm.addEventListener('submit', function() {
+    const btn = document.getElementById('upload-btn');
+    const txt = document.getElementById('upload-btn-text');
+    btn.disabled = true;
+    txt.innerHTML = '<span class="spinner"></span>&nbsp;Processing…';
+  });
+}
+</script>
+{% endblock %}

@@ -6,22 +6,27 @@
 
 {% block content %}
 
-<!-- Configuration & Generation Control Card -->
+<!-- Two-Step Form 24Q Workflow -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-  
-  <!-- Selectors & Generator -->
-  <div class="card lg:col-span-2">
-    <h2 class="text-sm font-semibold text-slate-200 mb-4">Filing Return Parameters</h2>
-    <div class="flex flex-wrap items-end gap-4">
+
+  <!-- Step 1: Generate TXT Return -->
+  <div class="card">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-white text-xs font-bold shrink-0">1</span>
+      <h2 class="text-sm font-semibold text-slate-200">Generate TXT Return</h2>
+    </div>
+    <p class="text-xs text-slate-400 mb-4">Select quarter &amp; FY, then generate the NSDL-compliant Form 24Q return TXT file from live payroll and TDS data.</p>
+
+    <div class="space-y-3">
       <div>
         <label class="form-label">Quarter</label>
-        <div class="flex gap-2">
+        <div class="flex gap-1.5 flex-wrap">
           {% for q in ['Q1', 'Q2', 'Q3', 'Q4'] %}
           {% set q_desc = {'Q1': 'Apr–Jun', 'Q2': 'Jul–Sep', 'Q3': 'Oct–Dec', 'Q4': 'Jan–Mar'} %}
           <a href="?quarter={{ q }}&fy={{ selected_fy }}"
-             class="px-4 py-2 rounded-xl text-sm font-medium transition-colors
+             class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
                     {% if selected_quarter == q %}bg-brand-600 text-white{% else %}bg-surface border border-border text-slate-300 hover:border-brand-500{% endif %}">
-            {{ q }}<span class="text-xs opacity-60 ml-1">{{ q_desc[q] }}</span>
+            {{ q }}<span class="opacity-60 ml-1">{{ q_desc[q] }}</span>
           </a>
           {% endfor %}
         </div>
@@ -29,7 +34,7 @@
 
       <div>
         <label class="form-label">Financial Year</label>
-        <select class="form-input w-36"
+        <select class="form-input w-full"
                 onchange="window.location.href='?quarter={{ selected_quarter }}&fy='+this.value">
           {% for fy_opt in ['2024-25', '2023-24', '2022-23'] %}
           <option value="{{ fy_opt }}" {% if fy_opt == selected_fy %}selected{% endif %}>{{ fy_opt }}</option>
@@ -37,48 +42,52 @@
         </select>
       </div>
 
-      <form id="generate-form" method="POST" action="{{ url_for('hr.form24q') }}" class="flex-1 flex flex-wrap gap-4 items-end" enctype="multipart/form-data">
+      <form id="generate-form" method="POST" action="{{ url_for('hr.form24q') }}" class="pt-1">
         <input type="hidden" name="quarter" value="{{ selected_quarter }}" />
         <input type="hidden" name="fy" value="{{ selected_fy }}" />
-        
-        <div>
-          <label class="form-label text-slate-300">Challan Status Inquiry (.csi) File</label>
-          <input type="file" name="csi_file" accept=".csi" class="form-input text-xs w-full max-w-xs" />
-          <p class="text-[10px] text-slate-500 mt-1">Optional. Required for actual FVU execution.</p>
-        </div>
-
-        <button type="submit" id="generate-form24q-btn" class="btn-primary w-full md:w-auto" {% if quarterly_summary.status == 'no_data' %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+        <button type="submit" id="generate-form24q-btn" class="btn-primary w-full">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
-          Generate Form 24Q Return
+          Generate TXT Return
         </button>
       </form>
     </div>
   </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const btn = document.getElementById("generate-form24q-btn");
-    const form = document.getElementById("generate-form");
-    
-    if(btn) {
-        btn.addEventListener("click", function(e) {
-            console.log("DEBUG: Button click - Generate Form 24Q button clicked.");
-            if (btn.disabled) {
-                console.log("DEBUG: Button is disabled. Form will not submit.");
-            }
-        });
-    }
-    
-    if(form) {
-        form.addEventListener("submit", function(e) {
-            console.log("DEBUG: Form submit - Generating Form 24Q return.");
-        });
-    }
-});
-</script>
+  <!-- Step 2: Run FVU Validation -->
+  <div class="card">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold shrink-0">2</span>
+      <h2 class="text-sm font-semibold text-slate-200">Run FVU Validation</h2>
+    </div>
+    <p class="text-xs text-slate-400 mb-4">Download the generated TXT from the history table, then upload it here along with the CSI file to run the Government FVU utility.</p>
+
+    <form id="fvu-form" method="POST" action="{{ url_for('hr.run_fvu') }}" enctype="multipart/form-data" class="space-y-3">
+      <div>
+        <label class="form-label">Form 24Q TXT File <span class="text-rose-400">*</span></label>
+        <input type="file" id="txt-upload" name="txt_file" accept=".txt"
+               class="form-input text-xs w-full" />
+        <p id="txt-filename" class="text-[10px] mt-1 text-slate-500">No file selected</p>
+      </div>
+      <div>
+        <label class="form-label">Challan Status Inquiry (.csi) File <span class="text-rose-400">*</span></label>
+        <input type="file" id="csi-upload" name="csi_file" accept=".csi"
+               class="form-input text-xs w-full" />
+        <p id="csi-filename" class="text-[10px] mt-1 text-slate-500">No file selected</p>
+      </div>
+      <button type="submit" id="run-fvu-btn" class="btn-primary w-full" disabled
+              style="opacity: 0.4; cursor: not-allowed;">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        Run FVU Validation
+      </button>
+      <p class="text-[10px] text-slate-500">Both files required to enable this button.</p>
+    </form>
+  </div>
 
   <!-- Government FVU Path Configuration -->
   <div class="card">
@@ -87,8 +96,8 @@ document.addEventListener("DOMContentLoaded", function() {
     <form method="POST" action="{{ url_for('hr.config_fvu') }}">
       <div class="space-y-3">
         <div>
-          <input type="text" name="fvu_path" class="form-input w-full text-xs font-mono" 
-                 value="{{ fvu_path }}" 
+          <input type="text" name="fvu_path" class="form-input w-full text-xs font-mono"
+                 value="{{ fvu_path }}"
                  placeholder="e.g. C:\NSDL_FVU\TDS_FVU_STANDALONE.jar" />
           <p class="text-[10px] text-slate-500 mt-1">Set to <strong>MOCK</strong> or leave blank to simulate validation.</p>
         </div>
@@ -100,6 +109,70 @@ document.addEventListener("DOMContentLoaded", function() {
   </div>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const txtInput  = document.getElementById("txt-upload");
+    const csiInput  = document.getElementById("csi-upload");
+    const txtLabel  = document.getElementById("txt-filename");
+    const csiLabel  = document.getElementById("csi-filename");
+    const fvuBtn    = document.getElementById("run-fvu-btn");
+    const genBtn    = document.getElementById("generate-form24q-btn");
+    const genForm   = document.getElementById("generate-form");
+
+    function updateFvuButton() {
+        const hasTxt = txtInput && txtInput.files && txtInput.files.length > 0;
+        const hasCsi = csiInput && csiInput.files && csiInput.files.length > 0;
+        if (hasTxt && hasCsi) {
+            fvuBtn.removeAttribute("disabled");
+            fvuBtn.style.opacity = "1";
+            fvuBtn.style.cursor  = "pointer";
+        } else {
+            fvuBtn.setAttribute("disabled", "true");
+            fvuBtn.style.opacity = "0.4";
+            fvuBtn.style.cursor  = "not-allowed";
+        }
+    }
+
+    if (txtInput) {
+        txtInput.addEventListener("change", function () {
+            txtLabel.textContent = this.files.length > 0
+                ? "✓ " + this.files[0].name
+                : "No file selected";
+            updateFvuButton();
+            console.log("DEBUG: TXT file selected:", this.files[0]?.name);
+        });
+    }
+
+    if (csiInput) {
+        csiInput.addEventListener("change", function () {
+            csiLabel.textContent = this.files.length > 0
+                ? "✓ " + this.files[0].name
+                : "No file selected";
+            updateFvuButton();
+            console.log("DEBUG: CSI file selected:", this.files[0]?.name);
+        });
+    }
+
+    if (genBtn) {
+        genBtn.addEventListener("click", function () {
+            console.log("DEBUG: Generate TXT button clicked.");
+        });
+    }
+    if (genForm) {
+        genForm.addEventListener("submit", function () {
+            console.log("DEBUG: Generating TXT — POST to /hr/form24q");
+        });
+    }
+
+    const fvuForm = document.getElementById("fvu-form");
+    if (fvuForm) {
+        fvuForm.addEventListener("submit", function () {
+            console.log("DEBUG: Running FVU — POST to /hr/form24q/run-fvu");
+        });
+    }
+});
+</script>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
 

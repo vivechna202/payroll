@@ -17,7 +17,7 @@ from services.csv_service import csv_to_records, append_row, get_all_declaration
 from services.payroll_service import get_all_payroll_records, process_monthly_payroll, get_payroll_summary, get_all_employee_salaries, get_employee_salary, update_employee_salary
 from services.tax_service import get_monthly_tds_records, compute_tds_for_month
 from services.proof_service import get_all_proofs, get_all_pending_proofs, approve_proof, reject_proof
-from services.form24q_service import get_quarterly_summary, get_form24q_files, generate_form24q, get_quarterly_employee_details, get_fvu_path, save_fvu_path
+from services.form24q_service import get_quarterly_summary, get_form24q_files, generate_form24q, get_quarterly_employee_details, get_fvu_path, save_fvu_path, run_fvu_validation
 
 hr_bp = Blueprint("hr", __name__, url_prefix="/hr")
 
@@ -286,20 +286,10 @@ def form24q():
     if request.method == "POST":
         quarter = request.form.get("quarter", selected_quarter)
         fy = request.form.get("fy", selected_fy)
-        
-        csi_filepath = None
-        if "csi_file" in request.files:
-            file = request.files["csi_file"]
-            if file and file.filename != "":
-                from werkzeug.utils import secure_filename
-                import os
-                from config import CSI_FOLDER
-                os.makedirs(CSI_FOLDER, exist_ok=True)
-                filename = secure_filename(file.filename)
-                csi_filepath = os.path.join(CSI_FOLDER, filename)
-                file.save(csi_filepath)
-                
-        result = generate_form24q(quarter, fy, user["name"], csi_filepath=csi_filepath)
+        print(f"[ROUTE] POST /hr/form24q — quarter={quarter}, fy={fy}, user={user['name']}")
+        print("[ROUTE] Calling generate_form24q (TXT only, no FVU)...")
+        result = generate_form24q(quarter, fy, user["name"])
+        print(f"[ROUTE] generate_form24q returned: status={result.get('status')}, message={result.get('message')}")
         if result.get("status") == "success":
             flash(result.get("message"), "success")
         else:
@@ -326,6 +316,52 @@ def config_fvu():
     fvu_path = request.form.get("fvu_path", "").strip()
     save_fvu_path(fvu_path)
     flash("Government FVU Utility path configuration updated successfully.", "success")
+    return redirect(url_for("hr.form24q"))
+
+
+@hr_bp.route("/form24q/run-fvu", methods=["POST"])
+@hr_required
+def run_fvu():
+    import os
+    from werkzeug.utils import secure_filename
+    from config import FORM24Q_FOLDER, CSI_FOLDER
+
+    user = session["user"]
+    print(f"[ROUTE] POST /hr/form24q/run-fvu — user={user['name']}")
+
+    txt_file = request.files.get("txt_file")
+    csi_file = request.files.get("csi_file")
+
+    if not txt_file or txt_file.filename == "":
+        flash("Form 24Q TXT file is required to run FVU validation.", "danger")
+        return redirect(url_for("hr.form24q"))
+
+    if not csi_file or csi_file.filename == "":
+        flash("CSI file is required to run FVU validation.", "danger")
+        return redirect(url_for("hr.form24q"))
+
+    # Save uploaded TXT into the FORM24Q_FOLDER
+    os.makedirs(FORM24Q_FOLDER, exist_ok=True)
+    txt_filename = secure_filename(txt_file.filename)
+    txt_filepath = os.path.join(FORM24Q_FOLDER, txt_filename)
+    txt_file.save(txt_filepath)
+    print(f"[ROUTE] TXT file saved: {txt_filepath}")
+
+    # Save uploaded CSI into the CSI_FOLDER
+    os.makedirs(CSI_FOLDER, exist_ok=True)
+    csi_filename = secure_filename(csi_file.filename)
+    csi_filepath = os.path.join(CSI_FOLDER, csi_filename)
+    csi_file.save(csi_filepath)
+    print(f"[ROUTE] CSI file saved: {csi_filepath}")
+
+    print("[ROUTE] Calling run_fvu_validation service...")
+    result = run_fvu_validation(txt_filepath, csi_filepath, user["name"])
+    print(f"[ROUTE] run_fvu_validation returned: status={result.get('status')}, message={result.get('message')}")
+
+    if result.get("status") == "success":
+        flash(result.get("message"), "success")
+    else:
+        flash(result.get("message"), "danger")
     return redirect(url_for("hr.form24q"))
 
 

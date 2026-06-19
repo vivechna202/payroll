@@ -26,6 +26,7 @@ FORM16_FOLDER = os.path.join(GENERATED_FOLDER, "form16")
 FORM24Q_FOLDER = os.path.join(GENERATED_FOLDER, "form24q")
 DUMMY_DATA_FOLDER = os.path.join(BASE_DIR, "dummy_data")
 CSI_FOLDER = os.path.join(UPLOAD_FOLDER, "csi")
+FORM16_PROCESSING_FOLDER = os.path.join(UPLOAD_FOLDER, "form16_processing")
 # ──────────────────────────────────────────────
 # CSV file paths  (swap with DB tables in Phase 2)
 # ──────────────────────────────────────────────
@@ -41,8 +42,9 @@ CSV_FORM16              = os.path.join(DUMMY_DATA_FOLDER, "form16.csv")
 CSV_FORM16_HISTORY      = os.path.join(DUMMY_DATA_FOLDER, "form16_history.csv")
 CSV_FORM24Q_HISTORY     = os.path.join(DUMMY_DATA_FOLDER, "form24q_history.csv")
 
-CSV_CHALLANS            = os.path.join(DUMMY_DATA_FOLDER, "challans.csv")
-CSV_DEDUCTOR_MASTER     = os.path.join(DUMMY_DATA_FOLDER, "deductor_master.csv")
+CSV_CHALLANS                = os.path.join(DUMMY_DATA_FOLDER, "challans.csv")
+CSV_DEDUCTOR_MASTER         = os.path.join(DUMMY_DATA_FOLDER, "deductor_master.csv")
+CSV_FORM16_PROCESSING_LOG   = os.path.join(DUMMY_DATA_FOLDER, "form16_processing_log.csv")
 
 
 # ──────────────────────────────────────────────

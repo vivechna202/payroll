@@ -1,0 +1,2 @@
+employee_id,name,pan,email,department,designation,quarter,financial_year,salary_paid,tds_deducted
+EMP001,Priya Sharma,ABCPS1234D,priya.sharma@company.com,Engineering,Software Engineer,Q2,2024-25,522000.00,0.00

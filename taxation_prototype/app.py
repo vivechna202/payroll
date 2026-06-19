@@ -17,7 +17,8 @@ from config import (
     FORM16_FOLDER, FORM24Q_FOLDER, DUMMY_DATA_FOLDER,
     CSV_EMPLOYEES, CSV_DECLARATIONS, CSV_DECLARATION_ITEMS, CSV_PROOFS, CSV_PAYROLL, CSV_EMPLOYEE_SALARY,
     CSV_TDS, CSV_DECLARATION_WINDOWS, CSV_FORM16, CSV_FORM16_HISTORY,
-    DUMMY_USERS, CURRENT_FY, CSV_CHALLANS, CSV_DEDUCTOR_MASTER, CSI_FOLDER
+    DUMMY_USERS, CURRENT_FY, CSV_CHALLANS, CSV_DEDUCTOR_MASTER, CSI_FOLDER,
+    FORM16_PROCESSING_FOLDER, CSV_FORM16_PROCESSING_LOG
 )
 from services.csv_service import ensure_csv
 
@@ -35,7 +36,8 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB
 # ─────────────────────────────────────────────────────────────
 
 for _dir in [UPLOAD_FOLDER, GENERATED_FOLDER, FORM16_FOLDER,
-             FORM24Q_FOLDER, DUMMY_DATA_FOLDER, CSI_FOLDER]:
+             FORM24Q_FOLDER, DUMMY_DATA_FOLDER, CSI_FOLDER,
+             FORM16_PROCESSING_FOLDER]:
     os.makedirs(_dir, exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────
@@ -94,6 +96,13 @@ ensure_csv(CSV_FORM16, [
 ensure_csv(CSV_FORM16_HISTORY, [
     "generation_id", "employee_id", "financial_year",
     "generated_by", "generated_at", "file_name"
+])
+
+# Form 16 Processing audit log (separate from existing Form 16 module)
+ensure_csv(CSV_FORM16_PROCESSING_LOG, [
+    "log_id", "session_id", "event_type", "filename",
+    "status", "pan", "employee_name", "financial_year",
+    "part_type", "error_detail", "timestamp"
 ])
 
 from config import CSV_FORM24Q_HISTORY
@@ -192,9 +201,15 @@ if _emp_df.empty:
 
 from routes.employee_routes import employee_bp
 from routes.hr_routes import hr_bp
+from routes.form16_processing_routes import form16_processing_bp
 
 app.register_blueprint(employee_bp)
 app.register_blueprint(hr_bp)
+app.register_blueprint(form16_processing_bp)
+
+# Cleanup stale Form 16 Processing temp sessions on startup
+from services.form16_processing_service import cleanup_stale_sessions
+cleanup_stale_sessions(max_age_hours=24)
 
 # ─────────────────────────────────────────────────────────────
 # Auth routes

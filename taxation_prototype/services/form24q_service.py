@@ -417,18 +417,23 @@ def validate_with_fvu(txt_filepath: str, csi_filepath: str = None) -> dict:
         return res
 
 def generate_form24q(quarter: str, fy: str, generated_by: str, csi_filepath: str = None) -> dict:
+    print(f"[SERVICE] generate_form24q called: quarter={quarter}, fy={fy}, by={generated_by}, csi={csi_filepath}")
     os.makedirs(FORM24Q_FOLDER, exist_ok=True)
     ensure_form24q_history_csv()
     
     months = QUARTER_MONTHS.get(quarter, [])
     challans = get_quarter_challans(quarter, fy)
+    print(f"[SERVICE] Challans for {quarter}/{fy}: {len(challans)} found")
     
     emp_df = read_csv(CSV_EMPLOYEES)
     pay_df = read_csv(CSV_PAYROLL)
     tds_df = read_csv(CSV_TDS)
+    print(f"[SERVICE] CSV rows loaded — employees={len(emp_df)}, payroll={len(pay_df)}, tds={len(tds_df)}")
     
     if emp_df.empty or pay_df.empty or tds_df.empty:
-        return {"status": "error", "message": "Required datasets are empty. Please ensure employees, payroll, and TDS data exist."}
+        msg = "Required datasets are empty. Please ensure employees, payroll, and TDS data exist."
+        print(f"[SERVICE] EARLY EXIT — {msg}")
+        return {"status": "error", "message": msg}
         
     emp_map = {row["employee_id"]: row for _, row in emp_df.iterrows()}
     
@@ -491,7 +496,9 @@ def generate_form24q(quarter: str, fy: str, generated_by: str, csi_filepath: str
             })
             
     if not monthly_data:
-        return {"status": "error", "message": f"No active payroll or TDS records found for {fy} {quarter}."}
+        msg = f"No active payroll or TDS records found for {fy} {quarter}. Run Payroll Processing and Monthly TDS Calculation first."
+        print(f"[SERVICE] EARLY EXIT — {msg}")
+        return {"status": "error", "message": msg}
         
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
@@ -516,9 +523,9 @@ def generate_form24q(quarter: str, fy: str, generated_by: str, csi_filepath: str
         })
     pd.DataFrame(staging_rows).to_csv(staging_filepath, index=False)
     
-    # 3. Generate Caret-Separated NSDL Return Text File
     txt_filename = f"Form24Q_{fy}_{quarter}_{timestamp}.txt"
     txt_filepath = os.path.join(FORM24Q_FOLDER, txt_filename)
+    print(f"[SERVICE] Writing TXT return file: {txt_filename}")
     
     # Count totals
     cd_count = len(challans)
@@ -672,21 +679,67 @@ def generate_form24q(quarter: str, fy: str, generated_by: str, csi_filepath: str
                     line_no += 1
                     sd_serial += 1
                     
-    # 5. Automatically Validate generated return using FVU utility
-    val_result = validate_with_fvu(txt_filepath, csi_filepath=csi_filepath)
-    
-    validation_status = val_result["status"]
-    validation_message = val_result["message"]
-    fvu_filename = val_result.get("fvu_file", "N/A")
-    err_filename = val_result.get("err_file", "N/A")
-    
-    # 6. Save records to history
+    # 5. Save generation record WITHOUT FVU validation
+    #    FVU validation is now a separate Step 2 triggered by the user.
     generation_id = f"F24Q-{str(uuid.uuid4())[:8].upper()}"
     history_row = {
         "generation_id": generation_id,
         "quarter": quarter,
         "financial_year": fy,
         "txt_file_name": txt_filename,
+        "fvu_file_name": "N/A",
+        "err_file_name": "N/A",
+        "validation_status": "NOT_VALIDATED",
+        "validation_message": "TXT generated. Upload TXT + CSI and click Run FVU Validation to validate.",
+        "generated_by": generated_by,
+        "generated_at": datetime.now().isoformat()
+    }
+    append_row(CSV_FORM24Q_HISTORY, history_row)
+    print(f"[SERVICE] History row saved: generation_id={generation_id}")
+
+    return {
+        "status": "success",
+        "generation_id": generation_id,
+        "filename": txt_filename,
+        "filepath": txt_filepath,
+        "message": f"Form 24Q TXT return generated: {txt_filename}. Download it, then upload it with a CSI file to run FVU validation."
+    }
+
+
+def run_fvu_validation(txt_filepath: str, csi_filepath: str, generated_by: str) -> dict:
+    """Step 2: Run FVU utility on an existing TXT file + CSI file.
+    
+    Called by the /hr/form24q/run-fvu backend route after both files are uploaded by the user.
+    Saves a new history record with the FVU validation result.
+    """
+    print(f"[SERVICE] run_fvu_validation: txt={txt_filepath}, csi={csi_filepath}, by={generated_by}")
+    ensure_form24q_history_csv()
+
+    if not os.path.exists(txt_filepath):
+        msg = f"TXT file not found at: {txt_filepath}"
+        print(f"[SERVICE] ERROR — {msg}")
+        return {"status": "error", "message": msg}
+
+    if not os.path.exists(csi_filepath):
+        msg = f"CSI file not found at: {csi_filepath}"
+        print(f"[SERVICE] ERROR — {msg}")
+        return {"status": "error", "message": msg}
+
+    print(f"[SERVICE] Running FVU utility...")
+    val_result = validate_with_fvu(txt_filepath, csi_filepath=csi_filepath)
+    print(f"[SERVICE] FVU result: status={val_result['status']}, message={val_result['message']}")
+
+    validation_status  = val_result["status"]
+    validation_message = val_result["message"]
+    fvu_filename       = val_result.get("fvu_file", "N/A")
+    err_filename       = val_result.get("err_file", "N/A")
+
+    generation_id = f"F24Q-FVU-{str(uuid.uuid4())[:8].upper()}"
+    history_row = {
+        "generation_id": generation_id,
+        "quarter": "MANUAL-FVU",
+        "financial_year": "N/A",
+        "txt_file_name": os.path.basename(txt_filepath),
         "fvu_file_name": fvu_filename,
         "err_file_name": err_filename,
         "validation_status": validation_status,
@@ -695,20 +748,15 @@ def generate_form24q(quarter: str, fy: str, generated_by: str, csi_filepath: str
         "generated_at": datetime.now().isoformat()
     }
     append_row(CSV_FORM24Q_HISTORY, history_row)
-    
+    print(f"[SERVICE] FVU history row saved: generation_id={generation_id}")
+
     if validation_status == "SUCCESS":
         return {
             "status": "success",
-            "filename": txt_filename,
-            "fvu_filename": fvu_filename,
-            "filepath": txt_filepath,
-            "message": f"Form 24Q return files generated successfully. Validation SUCCESS."
+            "message": f"FVU Validation SUCCESS. FVU file generated: {fvu_filename}"
         }
     else:
         return {
-            "status": "success",  # return success since files are created but validation failed
-            "filename": txt_filename,
-            "fvu_filename": "N/A",
-            "filepath": txt_filepath,
-            "message": f"Form 24Q return generated, but FVU validation FAILED: {validation_message}"
+            "status": "error",
+            "message": f"FVU Validation FAILED: {validation_message}. Check Validation Report for details."
         }

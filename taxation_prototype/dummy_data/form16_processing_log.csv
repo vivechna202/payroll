@@ -1,0 +1,17 @@
+log_id,session_id,event_type,filename,status,pan,employee_name,financial_year,part_type,error_detail,timestamp
+5DAEB475,276B5B5125604F57,UPLOAD_START,,started,,,,,,2026-06-19T06:32:13.747515
+21080008,276B5B5125604F57,DECRYPT_FAIL,EMP01_PartA.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:00.711949
+E2262C04,276B5B5125604F57,DECRYPT_FAIL,EMP01_PartB.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:00.886666
+85EDBD19,276B5B5125604F57,DECRYPT_FAIL,EMP02_PartA.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:00.914537
+E98F368F,276B5B5125604F57,DECRYPT_FAIL,EMP02_PartB.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:00.941151
+2C388290,276B5B5125604F57,DECRYPT_FAIL,EMP03_PartA.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:00.972956
+356F2C44,276B5B5125604F57,DECRYPT_FAIL,EMP03_PartB.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:01.002806
+01C1E7FA,276B5B5125604F57,DECRYPT_FAIL,EMP04_PartA.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:01.027769
+2987945B,276B5B5125604F57,DECRYPT_FAIL,EMP04_PartB.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:01.053153
+E9B955F5,276B5B5125604F57,DECRYPT_FAIL,EMP05_PartA.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:01.078417
+3F512B10,276B5B5125604F57,DECRYPT_FAIL,EMP05_PartB.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:01.103578
+8F268948,276B5B5125604F57,DECRYPT_FAIL,EMP06_PartA.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:01.129793
+1812EF3A,276B5B5125604F57,DECRYPT_FAIL,EMP07_PartB.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:01.155817
+786D6276,276B5B5125604F57,DECRYPT_FAIL,EMP08_PartA.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:01.181685
+67C56798,276B5B5125604F57,DECRYPT_FAIL,EMP08_PartB.pdf,corrupted,,,,,Cannot read PDF: Stream has ended unexpectedly,2026-06-19T06:33:01.208776
+C3DAEEA3,276B5B5125604F57,UPLOAD_COMPLETE,,done,,,,,"total=14, decrypted=0, failed=14, extraction_errors=0",2026-06-19T06:33:01.238101

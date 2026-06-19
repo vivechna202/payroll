@@ -1,0 +1,10 @@
+{
+    "encryption": "AES-256",
+    "password_hash": -3480193631198597431,
+    "metadata": {
+        "Employee Name": "Sneha Reddy",
+        "PAN": "QRSTU3456V",
+        "Financial Year": "2025-2026",
+        "Part Type": "B"
+    }
+}
