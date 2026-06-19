@@ -37,6 +37,11 @@ from services.form16_processing_service import (
     cleanup_session_files,
     load_session_results,
     match_parts,
+    # ── Task 2: Merge Engine ──
+    bulk_merge_session,
+    get_merge_dashboard_data,
+    load_merge_results,
+    zip_merged_files,
 )
 
 # ─────────────────────────────────────────────────────────────
@@ -87,6 +92,7 @@ def hr_required(f):
 SESSION_TAN_KEY        = "f16p_tan"           # Stores TAN string (RAM only)
 SESSION_ID_KEY         = "f16p_session_id"    # Stores processing session UUID
 SESSION_PROCESSED_KEY  = "f16p_has_results"   # Bool — results exist for this session
+SESSION_MERGED_KEY     = "f16p_has_merge"     # Bool — merge results exist for this session
 
 
 # ─────────────────────────────────────────────────────────────
@@ -108,12 +114,14 @@ def _get_or_create_session_id() -> str:
 def dashboard():
     """
     Main dashboard page.
-    Shows TAN input, upload form (if TAN set), and results (if processed).
+    Shows TAN input, upload form (if TAN set), results (if processed),
+    and merge dashboard (if merge has been run).
     """
     user = session["user"]
     tan_set = SESSION_TAN_KEY in session and bool(session[SESSION_TAN_KEY])
     processing_session_id = session.get(SESSION_ID_KEY)
     has_results = session.get(SESSION_PROCESSED_KEY, False)
+    has_merge   = session.get(SESSION_MERGED_KEY, False)
 
     dashboard_data = None
     if has_results and processing_session_id:
@@ -122,15 +130,27 @@ def dashboard():
         except Exception:
             has_results = False
 
+    merge_data = None
+    if processing_session_id:
+        try:
+            merge_data = get_merge_dashboard_data(processing_session_id)
+            if not merge_data.get("has_merge_results"):
+                merge_data = None
+        except Exception:
+            merge_data = None
+
     return render_template(
         "hr/form16_processing.html",
         user=user,
         tan_set=tan_set,
         has_results=has_results,
+        has_merge=has_merge,
         dashboard_data=dashboard_data,
+        merge_data=merge_data,
         fy=CURRENT_FY,
         active_page="form16_processing",
     )
+
 
 
 @form16_processing_bp.route("/set-tan", methods=["POST"])
@@ -260,6 +280,7 @@ def _reset_processing_session():
     """Clear processing results but keep TAN."""
     old_id = session.pop(SESSION_ID_KEY, None)
     session.pop(SESSION_PROCESSED_KEY, None)
+    session.pop(SESSION_MERGED_KEY, None)
     if old_id:
         cleanup_session_files(old_id)
 
@@ -269,5 +290,123 @@ def _full_session_clear():
     session.pop(SESSION_TAN_KEY, None)
     old_id = session.pop(SESSION_ID_KEY, None)
     session.pop(SESSION_PROCESSED_KEY, None)
+    session.pop(SESSION_MERGED_KEY, None)
     if old_id:
         cleanup_session_files(old_id)
+
+
+# ═════════════════════════════════════════════════════════════
+# TASK 2 — PDF MERGE ROUTES
+# All routes use the same hr_required guard.
+# No TAN needed — merges already-decrypted files from Task 1.
+# Additional routes:
+#   POST /merge          → Run bulk merge for all Ready records
+#   GET  /merge/download/<filename>  → Download one merged PDF
+#   GET  /merge/download-all         → Download all merged PDFs as ZIP
+# ═════════════════════════════════════════════════════════════
+
+
+@form16_processing_bp.route("/merge", methods=["POST"])
+@hr_required
+def run_merge():
+    """
+    Trigger bulk PDF merge for all Ready records in the current session.
+    Reads already-decrypted files from Task 1 — no TAN required.
+    """
+    processing_session_id = session.get(SESSION_ID_KEY)
+    if not processing_session_id:
+        flash("No processing session found. Please upload and process PDFs first.", "warning")
+        return redirect(url_for("form16_processing.dashboard"))
+
+    if not session.get(SESSION_PROCESSED_KEY):
+        flash("No processed PDF data found. Complete the upload and extraction step first.", "warning")
+        return redirect(url_for("form16_processing.dashboard"))
+
+    try:
+        result = bulk_merge_session(processing_session_id)
+    except Exception as e:
+        flash(f"Merge operation failed unexpectedly: {str(e)}", "danger")
+        return redirect(url_for("form16_processing.dashboard"))
+
+    summary = result.get("summary", {})
+    merged  = summary.get("merged", 0)
+    failed  = summary.get("failed", 0)
+    ready   = summary.get("ready", 0)
+    skipped = summary.get("skipped", 0)
+
+    if ready == 0:
+        flash(
+            f"No Ready records found to merge. "
+            f"{skipped} record(s) skipped (missing Part A or B).",
+            "warning"
+        )
+    elif merged > 0:
+        flash(
+            f"Merge complete: {merged}/{ready} Form 16 PDF(s) generated successfully."
+            + (f" {failed} failed." if failed else ""),
+            "success" if failed == 0 else "warning"
+        )
+    else:
+        flash(
+            f"Merge failed for all {ready} record(s). Check that decrypted source files are intact.",
+            "danger"
+        )
+
+    session[SESSION_MERGED_KEY] = merged > 0
+    return redirect(url_for("form16_processing.dashboard"))
+
+
+@form16_processing_bp.route("/merge/download/<path:filename>", methods=["GET"])
+@hr_required
+def download_merged(filename):
+    """
+    Download a single merged Form 16 PDF.
+    Filename must belong to the current session's output folder.
+    """
+    from flask import send_from_directory
+    from config import FORM16_MERGED_FOLDER
+
+    processing_session_id = session.get(SESSION_ID_KEY)
+    if not processing_session_id:
+        flash("No active session. Please process PDFs first.", "warning")
+        return redirect(url_for("form16_processing.dashboard"))
+
+    # Security: only serve files from this session's output subfolder
+    session_out = os.path.join(FORM16_MERGED_FOLDER, processing_session_id)
+    safe_filename = os.path.basename(filename)  # strip any path traversal
+    target = os.path.join(session_out, safe_filename)
+
+    if not os.path.exists(target):
+        flash(f"File '{safe_filename}' not found. It may have been cleared.", "danger")
+        return redirect(url_for("form16_processing.dashboard"))
+
+    return send_file(
+        target,
+        as_attachment=True,
+        download_name=safe_filename,
+        mimetype="application/pdf"
+    )
+
+
+@form16_processing_bp.route("/merge/download-all", methods=["GET"])
+@hr_required
+def download_all_merged():
+    """
+    Package all successfully merged PDFs into a ZIP and stream it.
+    """
+    processing_session_id = session.get(SESSION_ID_KEY)
+    if not processing_session_id:
+        flash("No active session.", "warning")
+        return redirect(url_for("form16_processing.dashboard"))
+
+    result = zip_merged_files(processing_session_id)
+    if not result["success"]:
+        flash(f"ZIP creation failed: {result['error']}", "danger")
+        return redirect(url_for("form16_processing.dashboard"))
+
+    return send_file(
+        result["zip_path"],
+        as_attachment=True,
+        download_name=os.path.basename(result["zip_path"]),
+        mimetype="application/zip"
+    )

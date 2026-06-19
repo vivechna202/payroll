@@ -717,3 +717,339 @@ def get_dashboard_data(session_id: str) -> dict:
             "missing_part_b":  missing_b,
         }
     }
+
+
+# ═════════════════════════════════════════════════════════════
+# TASK 2 — PDF MERGE ENGINE
+# ─────────────────────────────────────────────────────────────
+# Completely separate from Task 1. Reads decrypted PDFs produced
+# by Task 1 and merges Ready pairs into combined Form 16 PDFs.
+# No TAN involvement. No modification to any Task 1 function.
+# ═════════════════════════════════════════════════════════════
+
+from config import FORM16_MERGED_FOLDER
+
+
+# ─────────────────────────────────────────────────────────────
+# 9. Single PDF Merge
+# ─────────────────────────────────────────────────────────────
+
+def merge_pdfs(part_a_path: str, part_b_path: str, output_path: str) -> dict:
+    """
+    Merge Part A and Part B PDFs into a single combined PDF.
+
+    Page order: all Part A pages followed by all Part B pages.
+    Preserves original formatting and quality — no re-rendering.
+
+    Args:
+        part_a_path:  Path to the decrypted Part A PDF
+        part_b_path:  Path to the decrypted Part B PDF
+        output_path:  Destination path for the merged PDF
+
+    Returns:
+        {"success": bool, "pages": int, "error": str|None}
+    """
+    try:
+        import pypdf
+    except ImportError:
+        return {"success": False, "pages": 0, "error": "pypdf library not installed."}
+
+    # Validate source files exist
+    if not os.path.exists(part_a_path):
+        return {"success": False, "pages": 0, "error": f"Part A file not found: {part_a_path}"}
+    if not os.path.exists(part_b_path):
+        return {"success": False, "pages": 0, "error": f"Part B file not found: {part_b_path}"}
+
+    try:
+        writer = pypdf.PdfWriter()
+
+        # Append Part A pages
+        reader_a = pypdf.PdfReader(part_a_path)
+        if reader_a.is_encrypted:
+            return {"success": False, "pages": 0,
+                    "error": "Part A PDF is still encrypted. Ensure decryption ran first."}
+        for page in reader_a.pages:
+            writer.add_page(page)
+        pages_a = len(reader_a.pages)
+
+        # Append Part B pages
+        reader_b = pypdf.PdfReader(part_b_path)
+        if reader_b.is_encrypted:
+            return {"success": False, "pages": 0,
+                    "error": "Part B PDF is still encrypted. Ensure decryption ran first."}
+        for page in reader_b.pages:
+            writer.add_page(page)
+        pages_b = len(reader_b.pages)
+
+        total_pages = pages_a + pages_b
+
+        # Write merged output
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, "wb") as out_f:
+            writer.write(out_f)
+
+        return {"success": True, "pages": total_pages, "error": None}
+
+    except Exception as e:
+        return {"success": False, "pages": 0, "error": f"Merge failed: {e}"}
+
+
+# ─────────────────────────────────────────────────────────────
+# 10. Output File Naming
+# ─────────────────────────────────────────────────────────────
+
+def get_merged_output_path(pan: str, session_id: str) -> str:
+    """
+    Returns the output path for a merged Form 16 PDF.
+    Format: <FORM16_MERGED_FOLDER>/<session_id>/<PAN>_Form16.pdf
+
+    Handles duplicates by appending _2, _3, etc.
+    """
+    session_out = os.path.join(FORM16_MERGED_FOLDER, session_id)
+    os.makedirs(session_out, exist_ok=True)
+    filename = f"{pan}_Form16.pdf"
+    out_path = os.path.join(session_out, filename)
+    # Handle duplicate — unlikely (one PAN per session) but safe
+    return _unique_path(out_path)
+
+
+# ─────────────────────────────────────────────────────────────
+# 11. Bulk Merge Pipeline
+# ─────────────────────────────────────────────────────────────
+
+def bulk_merge_session(session_id: str) -> dict:
+    """
+    Merges all Ready PAN records from a completed Task 1 session.
+
+    Only processes records where status == 'Ready' (both Part A and B present).
+    Skips all others and continues on per-record failures.
+    TAN is NOT involved here — works on already-decrypted files.
+
+    Returns:
+        {
+          "results": [per-PAN merge result dicts],
+          "summary": {ready, merged, failed, skipped},
+          "session_id": str
+        }
+    """
+    # Load Task 1 results
+    processed = load_session_results(session_id)
+    matched   = match_parts(processed)
+
+    ready_records = [m for m in matched if m["status"] == "Ready"]
+    counters = {"ready": len(ready_records), "merged": 0, "failed": 0, "skipped": 0}
+
+    log_processing_event(
+        session_id=session_id,
+        event_type="MERGE_START",
+        status="started",
+        error_detail=f"ready_records={len(ready_records)}"
+    )
+
+    merge_results = []
+
+    for record in matched:
+        pan           = record["pan"]
+        employee_name = record["employee_name"]
+        financial_year = record.get("financial_year", "Unknown")
+
+        # Skip non-Ready records
+        if record["status"] != "Ready":
+            merge_results.append({
+                "pan":           pan,
+                "employee_name": employee_name,
+                "financial_year": financial_year,
+                "merge_status":  "skipped",
+                "output_filename": None,
+                "output_path":   None,
+                "pages":         0,
+                "error":         f"Skipped — status: {record['status']}",
+                "merged_at":     None,
+            })
+            counters["skipped"] += 1
+            continue
+
+        # Determine source file paths
+        part_a_path = record["part_a"]["decrypted_path"] if record.get("part_a") else None
+        part_b_path = record["part_b"]["decrypted_path"] if record.get("part_b") else None
+
+        if not part_a_path or not part_b_path:
+            merge_results.append({
+                "pan":           pan,
+                "employee_name": employee_name,
+                "financial_year": financial_year,
+                "merge_status":  "failed",
+                "output_filename": None,
+                "output_path":   None,
+                "pages":         0,
+                "error":         "Source file path missing from session data.",
+                "merged_at":     None,
+            })
+            counters["failed"] += 1
+            log_processing_event(
+                session_id=session_id, event_type="MERGE_FAIL",
+                pan=pan, employee_name=employee_name,
+                status="missing_path",
+                error_detail="decrypted_path was None for Part A or Part B"
+            )
+            continue
+
+        # Merge
+        output_path = get_merged_output_path(pan, session_id)
+        output_filename = os.path.basename(output_path)
+        merge_result = merge_pdfs(part_a_path, part_b_path, output_path)
+        merged_at = datetime.utcnow().isoformat()
+
+        if merge_result["success"]:
+            merge_results.append({
+                "pan":            pan,
+                "employee_name":  employee_name,
+                "financial_year": financial_year,
+                "merge_status":   "merged",
+                "output_filename": output_filename,
+                "output_path":    output_path,
+                "pages":          merge_result["pages"],
+                "error":          None,
+                "merged_at":      merged_at,
+            })
+            counters["merged"] += 1
+            log_processing_event(
+                session_id=session_id, event_type="MERGE_SUCCESS",
+                pan=pan, employee_name=employee_name,
+                financial_year=financial_year,
+                filename=output_filename, status="merged",
+                error_detail=f"pages={merge_result['pages']}"
+            )
+        else:
+            merge_results.append({
+                "pan":            pan,
+                "employee_name":  employee_name,
+                "financial_year": financial_year,
+                "merge_status":   "failed",
+                "output_filename": None,
+                "output_path":    None,
+                "pages":          0,
+                "error":          merge_result["error"],
+                "merged_at":      merged_at,
+            })
+            counters["failed"] += 1
+            log_processing_event(
+                session_id=session_id, event_type="MERGE_FAIL",
+                pan=pan, employee_name=employee_name,
+                status="merge_error",
+                error_detail=merge_result["error"] or ""
+            )
+
+    # Persist merge results to session JSON
+    _save_merge_results(session_id, merge_results)
+
+    log_processing_event(
+        session_id=session_id, event_type="MERGE_COMPLETE",
+        status="done",
+        error_detail=(
+            f"ready={counters['ready']}, merged={counters['merged']}, "
+            f"failed={counters['failed']}, skipped={counters['skipped']}"
+        )
+    )
+
+    return {
+        "results":    merge_results,
+        "summary":    counters,
+        "session_id": session_id,
+    }
+
+
+# ─────────────────────────────────────────────────────────────
+# 12. Merge Result Persistence
+# ─────────────────────────────────────────────────────────────
+
+def _save_merge_results(session_id: str, merge_results: list) -> str:
+    """Saves merge results to merge_results.json inside the processing session folder."""
+    folder = os.path.join(FORM16_PROCESSING_FOLDER, session_id)
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, "merge_results.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(merge_results, f, indent=2)
+    return path
+
+
+def load_merge_results(session_id: str) -> list:
+    """Loads merge results from session JSON. Returns [] if not found."""
+    folder = os.path.join(FORM16_PROCESSING_FOLDER, session_id)
+    path = os.path.join(folder, "merge_results.json")
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+# ─────────────────────────────────────────────────────────────
+# 13. Merge Dashboard Data
+# ─────────────────────────────────────────────────────────────
+
+def get_merge_dashboard_data(session_id: str) -> dict:
+    """
+    Returns all data needed to render the Merge Dashboard section.
+    Combines Task 1 ready count with Task 2 merge results.
+    """
+    merge_results = load_merge_results(session_id)
+
+    merged_count  = sum(1 for r in merge_results if r["merge_status"] == "merged")
+    failed_count  = sum(1 for r in merge_results if r["merge_status"] == "failed")
+    skipped_count = sum(1 for r in merge_results if r["merge_status"] == "skipped")
+    ready_count   = merged_count + failed_count  # total attempted
+
+    return {
+        "merge_results": merge_results,
+        "has_merge_results": len(merge_results) > 0,
+        "summary": {
+            "ready":   ready_count,
+            "merged":  merged_count,
+            "failed":  failed_count,
+            "skipped": skipped_count,
+        }
+    }
+
+
+# ─────────────────────────────────────────────────────────────
+# 14. ZIP Download Builder
+# ─────────────────────────────────────────────────────────────
+
+def zip_merged_files(session_id: str) -> dict:
+    """
+    Creates a ZIP archive of all successfully merged Form 16 PDFs
+    for the given session.
+
+    Returns:
+        {"success": bool, "zip_path": str|None, "count": int, "error": str|None}
+    """
+    merge_results = load_merge_results(session_id)
+    successful = [
+        r for r in merge_results
+        if r["merge_status"] == "merged" and r.get("output_path")
+        and os.path.exists(r["output_path"])
+    ]
+
+    if not successful:
+        return {
+            "success": False, "zip_path": None, "count": 0,
+            "error": "No successfully merged PDFs found to zip."
+        }
+
+    # Build ZIP in the merged session folder
+    session_out = os.path.join(FORM16_MERGED_FOLDER, session_id)
+    os.makedirs(session_out, exist_ok=True)
+    zip_name = f"Form16_Merged_{session_id[:8]}.zip"
+    zip_path = os.path.join(session_out, zip_name)
+
+    try:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for r in successful:
+                zf.write(r["output_path"], arcname=r["output_filename"])
+        return {"success": True, "zip_path": zip_path, "count": len(successful), "error": None}
+    except Exception as e:
+        return {"success": False, "zip_path": None, "count": 0, "error": str(e)}
+
