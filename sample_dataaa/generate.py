@@ -70,9 +70,9 @@ def generate_all_test_files():
     
     for emp in employees:
         meta_base = {
-            "Employee_Name": emp["name"],
+            "Employee Name": emp["name"],
             "PAN": emp["pan"],
-            "Financial_Year": "2025-2026"
+            "Financial Year": "2025-2026"
         }
         
         if emp["scen"] == "Matching A & B":
