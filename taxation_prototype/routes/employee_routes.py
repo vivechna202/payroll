@@ -170,28 +170,27 @@ def form16_download():
     form16_records = get_form16_history(fy=fy, employee_id=user["employee_id"])
     form16_details = get_form16_details(user["employee_id"], fy)
     
-    # Get approved Form16 PDFs from CSV (persisted by HR)
+    # Get published Form16 PDFs from CSV (persisted by HR)
     import os
     import csv
     from config import CSV_FORM16_APPROVED
     from services.csv_service import read_csv_row
     
-    approved_form16s = []
+    published_form16s = []
     if os.path.exists(CSV_FORM16_APPROVED):
         with open(CSV_FORM16_APPROVED, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                # Filter to only show approved Form16s for this employee (by PAN)
                 employee_data = read_csv_row(CSV_EMPLOYEES, "employee_id", user["employee_id"])
-                if employee_data and row.get("pan") == employee_data.get("pan"):
-                    approved_form16s.append(row)
+                if employee_data and row.get("pan") == employee_data.get("pan") and row.get("published") == "True":
+                    published_form16s.append(row)
     
     return render_template(
         "employee/form16_download.html",
         user=user,
         form16_records=form16_records,
         form16_details=form16_details,
-        approved_form16s=approved_form16s,
+        published_form16s=published_form16s,
         fy=fy,
         active_page="form16_download",
     )
@@ -243,11 +242,20 @@ def download_approved_form16(filename):
     
     employee_pan = employee_data.get("pan")
     
-    # Check if this file is approved for this employee
-    approved_form16s = session.get("f16p_approved", [])
-    approved_record = next((r for r in approved_form16s if r.get("filename") == filename and r.get("pan") == employee_pan), None)
+    # Check if this file is published for this employee
+    from config import CSV_FORM16_APPROVED
+    import csv
     
-    if not approved_record:
+    published_record = None
+    if os.path.exists(CSV_FORM16_APPROVED):
+        with open(CSV_FORM16_APPROVED, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row.get("filename") == filename and row.get("pan") == employee_pan and row.get("published") == "True":
+                    published_record = row
+                    break
+    
+    if not published_record:
         abort(403)
     
     # Find the file in the merged folder (need to determine which session folder)

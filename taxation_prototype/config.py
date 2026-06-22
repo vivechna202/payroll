@@ -66,6 +66,12 @@ DUMMY_USERS = {
         "name": "Rahul Verma",
         "employee_id": "HR001",
     },
+    "emp005": {
+    "password": "emp@123",
+    "role": "employee",
+    "employee_id": "EMP005",
+    "name": "Aarav Sharma"
+   }
 }
 
 # ──────────────────────────────────────────────
