@@ -237,6 +237,7 @@
   .badge-merge-fail { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
   .badge-skipped { background: rgba(100,116,139,0.12); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
   .badge-signed { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+  .badge-approved { background: rgba(20,184,166,0.15); color: #2dd4bf; border: 1px solid rgba(20,184,166,0.3); }
   /* Bulk sign button */
   .btn-bulk-sign {
     display: inline-flex; align-items: center; gap: 0.5rem;
@@ -249,6 +250,18 @@
   }
   .btn-bulk-sign:hover { opacity: 0.9; transform: translateY(-1px); }
   .btn-bulk-sign:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  /* Bulk approve button */
+  .btn-bulk-approve {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.625rem;
+    background: linear-gradient(135deg, #14b8a6, #0d9488);
+    color: white; font-size: 0.8rem; font-weight: 700;
+    border: none; cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .btn-bulk-approve:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-bulk-approve:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   /* Individual sign button */
   .btn-sign {
     display: inline-flex; align-items: center; gap: 0.35rem;
@@ -261,6 +274,18 @@
   }
   .btn-sign:hover { background: rgba(99,102,241,0.22); border-color: rgba(99,102,241,0.5); color: #c7d2fe; }
   .btn-sign:disabled { opacity: 0.4; cursor: not-allowed; }
+  /* Individual approve button */
+  .btn-approve {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 0.5rem;
+    background: rgba(20,184,166,0.12);
+    border: 1px solid rgba(20,184,166,0.3);
+    color: #5eead4; font-size: 0.7rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-approve:hover { background: rgba(20,184,166,0.22); border-color: rgba(20,184,166,0.5); color: #99f6e4; }
+  .btn-approve:disabled { opacity: 0.4; cursor: not-allowed; }
   /* Checkbox styling */
   .sign-checkbox {
     width: 1rem; height: 1rem;
@@ -389,6 +414,23 @@
       <div class="min-w-0">
         <p class="text-xs font-semibold {{ 'text-emerald-400' if (merge_data and merge_data.summary.merged > 0) else 'text-slate-500' }}">Sign PDFs</p>
         <p class="text-[10px] text-slate-500 truncate">Digitally sign merged Form 16</p>
+      </div>
+    </div>
+
+    <div class="flex-shrink-0 px-2">
+      <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </div>
+
+    {# Step 6 #}
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <div class="step-num {{ 'done' if approved_count > 0 else 'inactive' }}">
+        {% if approved_count > 0 %}
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        {% else %}6{% endif %}
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-semibold {{ 'text-emerald-400' if approved_count > 0 else 'text-slate-500' }}">Approve</p>
+        <p class="text-[10px] text-slate-500 truncate">HR approval for distribution</p>
       </div>
     </div>
 
@@ -960,7 +1002,7 @@
     </div>
 
     {# ── Signing Summary Counters ─────────────────── #}
-    <div class="grid grid-cols-3 gap-3 fade-in" style="animation-delay:0.35s">
+    <div class="grid grid-cols-4 gap-3 fade-in" style="animation-delay:0.35s">
       <div class="merge-metric-mini">
         <div class="val text-violet-400" id="merged-count">{{ msum.merged }}</div>
         <div class="lbl">Merged PDFs</div>
@@ -968,6 +1010,10 @@
       <div class="merge-metric-mini">
         <div class="val text-emerald-400" id="signed-count">0</div>
         <div class="lbl">Signed PDFs</div>
+      </div>
+      <div class="merge-metric-mini">
+        <div class="val text-teal-400" id="approved-count">0</div>
+        <div class="lbl">Approved</div>
       </div>
       <div class="merge-metric-mini">
         <div class="val text-amber-400" id="pending-count">{{ msum.merged }}</div>
@@ -989,12 +1035,20 @@
           <input type="checkbox" id="select-all-merged" class="sign-checkbox" onchange="toggleAllMerged(this)">
           <label for="select-all-merged" class="text-xs text-slate-400 cursor-pointer">Select All</label>
         </div>
-        <button type="button" id="bulk-sign-btn" class="btn-bulk-sign" onclick="bulkSignSelected()" disabled>
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-          </svg>
-          Bulk Sign Selected
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" id="bulk-sign-btn" class="btn-bulk-sign" onclick="bulkSignSelected()" disabled>
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+            </svg>
+            Bulk Sign Selected
+          </button>
+          <button type="button" id="bulk-approve-btn" class="btn-bulk-approve" onclick="bulkApproveSelected()" disabled>
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Bulk Approve Selected
+          </button>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
@@ -1057,6 +1111,12 @@
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
                     </svg>
                     Sign
+                  </button>
+                  <button type="button" class="btn-approve approve-btn" data-pan="{{ mr.pan }}" onclick="approveDocument('{{ mr.output_filename }}', '{{ mr.pan }}', '{{ mr.employee_name }}')" style="display:none;">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Approve
                   </button>
                 {% elif mr.merge_status == 'failed' %}
                   <span class="text-[10px] text-slate-500 italic" title="{{ mr.error or '' }}">{{ (mr.error or 'Unknown error') | truncate(40, True, '…') }}</span>
@@ -1278,15 +1338,91 @@ if (mergeForm) {
 // ── DSC Agent Integration ───────────────────────────────────
 const DSC_AGENT_URL = 'http://localhost:5001';
 
-// Track signed count
+// Track signed and approved counts
 let signedCount = 0;
+let approvedCount = {{ approved_count | default(0) }};
+
+// Initialize UI state on page load
+function initializeUIState() {
+  const rows = document.querySelectorAll('tr[data-pan]');
+  rows.forEach(row => {
+    const status = row.dataset.status;
+    const pan = row.dataset.pan;
+    const badge = row.querySelector('.merge-status-badge');
+    
+    // Restore SIGNED state
+    if (status === 'signed' || (badge && badge.classList.contains('badge-signed'))) {
+      const signBtn = row.querySelector('.sign-btn');
+      const approveBtn = row.querySelector('.approve-btn');
+      
+      if (signBtn) {
+        signBtn.disabled = true;
+        signBtn.innerHTML = `
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          Signed
+        `;
+        signBtn.classList.remove('btn-sign');
+        signBtn.classList.add('btn-dl');
+        signBtn.style.background = 'rgba(99,102,241,0.12)';
+        signBtn.style.borderColor = 'rgba(99,102,241,0.3)';
+        signBtn.style.color = '#818cf8';
+      }
+      
+      if (approveBtn) {
+        approveBtn.style.display = 'inline-flex';
+      }
+      
+      signedCount++;
+    }
+    
+    // Restore APPROVED state
+    if (status === 'approved' || (badge && badge.classList.contains('badge-approved'))) {
+      const signBtn = row.querySelector('.sign-btn');
+      const approveBtn = row.querySelector('.approve-btn');
+      
+      if (signBtn) {
+        signBtn.disabled = true;
+        signBtn.innerHTML = `
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          Signed
+        `;
+        signBtn.classList.remove('btn-sign');
+        signBtn.classList.add('btn-dl');
+        signBtn.style.background = 'rgba(99,102,241,0.12)';
+        signBtn.style.borderColor = 'rgba(99,102,241,0.3)';
+        signBtn.style.color = '#818cf8';
+      }
+      
+      if (approveBtn) {
+        approveBtn.disabled = true;
+        approveBtn.innerHTML = `
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          Approved
+        `;
+        approveBtn.classList.remove('btn-approve');
+        approveBtn.classList.add('btn-dl');
+        approveBtn.style.background = 'rgba(20,184,166,0.12)';
+        approveBtn.style.borderColor = 'rgba(20,184,166,0.3)';
+        approveBtn.style.color = '#5eead4';
+      }
+    }
+  });
+  
+  updateSigningCounters();
+  updateBulkApproveButton();
+}
+
+// Run initialization on page load
+document.addEventListener('DOMContentLoaded', initializeUIState);
 
 function updateSigningCounters() {
   const signedCountEl = document.getElementById('signed-count');
+  const approvedCountEl = document.getElementById('approved-count');
   const pendingCountEl = document.getElementById('pending-count');
   const mergedCountEl = document.getElementById('merged-count');
   
   if (signedCountEl) signedCountEl.textContent = signedCount;
+  if (approvedCountEl) approvedCountEl.textContent = approvedCount;
   if (pendingCountEl && mergedCountEl) {
     const mergedCount = parseInt(mergedCountEl.textContent);
     pendingCountEl.textContent = mergedCount - signedCount;
@@ -1297,13 +1433,47 @@ function toggleAllMerged(checkbox) {
   const checkboxes = document.querySelectorAll('.merged-checkbox');
   checkboxes.forEach(cb => cb.checked = checkbox.checked);
   updateBulkSignButton();
+  updateBulkApproveButton();
 }
 
 function updateBulkSignButton() {
   const checkboxes = document.querySelectorAll('.merged-checkbox:checked');
   const bulkBtn = document.getElementById('bulk-sign-btn');
   if (bulkBtn) {
-    bulkBtn.disabled = checkboxes.length === 0;
+    // Disable if no checkboxes selected or if any selected document is already signed or approved
+    let canSign = checkboxes.length > 0;
+    checkboxes.forEach(cb => {
+      const row = cb.closest('tr');
+      const status = row.dataset.status;
+      const badge = row.querySelector('.merge-status-badge');
+      // Cannot sign if already SIGNED or APPROVED
+      if (status === 'signed' || status === 'approved' || 
+          (badge && (badge.classList.contains('badge-signed') || badge.classList.contains('badge-approved')))) {
+        canSign = false;
+      }
+    });
+    bulkBtn.disabled = !canSign;
+  }
+}
+
+function updateBulkApproveButton() {
+  const checkboxes = document.querySelectorAll('.merged-checkbox:checked');
+  const bulkBtn = document.getElementById('bulk-approve-btn');
+  if (bulkBtn) {
+    // Only enable if at least one selected document is signed (not approved)
+    let hasSigned = false;
+    checkboxes.forEach(cb => {
+      const row = cb.closest('tr');
+      // Check both data-status attribute and badge class for reliability
+      const status = row.dataset.status;
+      const badge = row.querySelector('.merge-status-badge');
+      // Must be SIGNED, not APPROVED
+      if ((status === 'signed' || (badge && badge.classList.contains('badge-signed'))) && 
+          status !== 'approved' && !(badge && badge.classList.contains('badge-approved'))) {
+        hasSigned = true;
+      }
+    });
+    bulkBtn.disabled = !hasSigned;
   }
 }
 
@@ -1345,6 +1515,12 @@ async function signDocument(filename, pan) {
         console.error('Badge not found for PAN:', pan);
       }
       
+      // Update row status attribute
+      const row = btn.closest('tr');
+      if (row) {
+        row.dataset.status = 'signed';
+      }
+      
       // Disable the sign button
       btn.disabled = true;
       btn.innerHTML = `
@@ -1357,9 +1533,16 @@ async function signDocument(filename, pan) {
       btn.style.borderColor = 'rgba(99,102,241,0.3)';
       btn.style.color = '#818cf8';
       
+      // Show Approve button
+      const approveBtn = document.querySelector(`.approve-btn[data-pan="${pan}"]`);
+      if (approveBtn) {
+        approveBtn.style.display = 'inline-flex';
+      }
+      
       // Update signed count
       signedCount++;
       updateSigningCounters();
+      updateBulkApproveButton();
       
       alert(`Success: ${filename} signed successfully (mock)`);
     } else {
@@ -1391,6 +1574,14 @@ async function bulkSignSelected() {
     const filename = checkbox.dataset.filename;
     const row = checkbox.closest('tr');
     const pan = row.dataset.pan;
+    const status = row.dataset.status;
+    const badge = row.querySelector('.merge-status-badge');
+    
+    // Only sign MERGED documents (not already SIGNED or APPROVED)
+    if (status === 'signed' || status === 'approved' || 
+        (badge && (badge.classList.contains('badge-signed') || badge.classList.contains('badge-approved')))) {
+      continue;
+    }
     
     try {
       const response = await fetch(`${DSC_AGENT_URL}/sign`, {
@@ -1420,6 +1611,11 @@ async function bulkSignSelected() {
           console.error('Badge not found for PAN:', pan);
         }
         
+        // Update row status attribute
+        if (row) {
+          row.dataset.status = 'signed';
+        }
+        
         // Update individual sign button
         const btn = document.querySelector(`.sign-btn[data-pan="${pan}"]`);
         if (btn) {
@@ -1437,6 +1633,12 @@ async function bulkSignSelected() {
           console.error('Sign button not found for PAN:', pan);
         }
         
+        // Show Approve button
+        const approveBtn = document.querySelector(`.approve-btn[data-pan="${pan}"]`);
+        if (approveBtn) {
+          approveBtn.style.display = 'inline-flex';
+        }
+        
         // Uncheck the checkbox
         checkbox.checked = false;
       } else {
@@ -1452,6 +1654,7 @@ async function bulkSignSelected() {
   // Update signed count
   signedCount += successCount;
   updateSigningCounters();
+  updateBulkApproveButton();
   
   bulkBtn.disabled = false;
   bulkBtn.innerHTML = originalText;
@@ -1459,6 +1662,189 @@ async function bulkSignSelected() {
   
   // Show summary
   alert(`Bulk Sign Complete:\n✓ Success: ${successCount}\n✗ Failed: ${failCount}${errors.length > 0 ? '\n\nErrors:\n' + errors.slice(0, 5).join('\n') : ''}`);
+}
+
+// ── Approval Functions ───────────────────────────────────
+async function approveDocument(filename, pan, employeeName) {
+  const btn = document.querySelector(`.approve-btn[data-pan="${pan}"]`);
+  if (!btn) {
+    console.error('Approve button not found for PAN:', pan);
+    return;
+  }
+  
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>&nbsp;Approving…';
+  
+  try {
+    const response = await fetch('/hr/form16-processing/approve', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        filename: filename,
+        pan: pan,
+        employee_name: employeeName
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      // Update merge status badge to APPROVED
+      const badge = document.querySelector(`.merge-status-badge[data-pan="${pan}"]`);
+      if (badge) {
+        badge.className = 'badge badge-approved';
+        badge.innerHTML = `
+          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          APPROVED
+        `;
+      } else {
+        console.error('Badge not found for PAN:', pan);
+      }
+      
+      // Update row status attribute
+      const row = btn.closest('tr');
+      if (row) {
+        row.dataset.status = 'approved';
+      }
+      
+      // Change approve button to Approved state
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+        Approved
+      `;
+      btn.classList.remove('btn-approve');
+      btn.classList.add('btn-dl');
+      btn.style.background = 'rgba(20,184,166,0.12)';
+      btn.style.borderColor = 'rgba(20,184,166,0.3)';
+      btn.style.color = '#5eead4';
+      
+      // Disable bulk approve button
+      const bulkApproveBtn = document.getElementById('bulk-approve-btn');
+      if (bulkApproveBtn) {
+        bulkApproveBtn.disabled = true;
+      }
+      
+      // Update approved count
+      approvedCount++;
+      updateSigningCounters();
+      
+      alert(`Success: ${filename} approved successfully`);
+    } else {
+      throw new Error(data.message || 'Approval failed');
+    }
+  } catch (error) {
+    console.error('Approve error:', error);
+    alert(`Error: Failed to approve ${filename}. ${error.message}`);
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+async function bulkApproveSelected() {
+  const checkboxes = document.querySelectorAll('.merged-checkbox:checked');
+  const bulkBtn = document.getElementById('bulk-approve-btn');
+  
+  if (checkboxes.length === 0) return;
+  
+  const originalText = bulkBtn.innerHTML;
+  bulkBtn.disabled = true;
+  bulkBtn.innerHTML = '<span class="spinner"></span>&nbsp;Approving…';
+  
+  let successCount = 0;
+  let failCount = 0;
+  const errors = [];
+  
+  for (const checkbox of checkboxes) {
+    const filename = checkbox.dataset.filename;
+    const row = checkbox.closest('tr');
+    const pan = row.dataset.pan;
+    const status = row.dataset.status;
+    const badge = row.querySelector('.merge-status-badge');
+    
+    // Only approve SIGNED documents (not already APPROVED)
+    if (status === 'approved' || (badge && badge.classList.contains('badge-approved'))) {
+      continue;
+    }
+    
+    // Must be SIGNED to approve
+    if (status !== 'signed' && (!badge || !badge.classList.contains('badge-signed'))) {
+      continue;
+    }
+    
+    const employeeName = row.querySelector('td:nth-child(3)').textContent.trim();
+    
+    try {
+      const response = await fetch('/hr/form16-processing/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename: filename,
+          pan: pan,
+          employee_name: employeeName
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        successCount++;
+        // Update merge status badge to APPROVED
+        if (badge) {
+          badge.className = 'badge badge-approved';
+          badge.innerHTML = `
+            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            APPROVED
+          `;
+        }
+        
+        // Update row status attribute
+        if (row) {
+          row.dataset.status = 'approved';
+        }
+        
+        // Change approve button to Approved state
+        const btn = document.querySelector(`.approve-btn[data-pan="${pan}"]`);
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = `
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            Approved
+          `;
+          btn.classList.remove('btn-approve');
+          btn.classList.add('btn-dl');
+          btn.style.background = 'rgba(20,184,166,0.12)';
+          btn.style.borderColor = 'rgba(20,184,166,0.3)';
+          btn.style.color = '#5eead4';
+        }
+        
+        // Uncheck the checkbox
+        checkbox.checked = false;
+      } else {
+        failCount++;
+        errors.push(`${filename}: ${data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      failCount++;
+      errors.push(`${filename}: ${error.message}`);
+    }
+  }
+  
+  // Update approved count
+  approvedCount += successCount;
+  updateSigningCounters();
+  
+  bulkBtn.disabled = false;
+  bulkBtn.innerHTML = originalText;
+  updateBulkApproveButton();
+  
+  // Show summary
+  alert(`Bulk Approve Complete:\n✓ Success: ${successCount}\n✗ Failed: ${failCount}${errors.length > 0 ? '\n\nErrors:\n' + errors.slice(0, 5).join('\n') : ''}`);
 }
 </script>
 {% endblock %}

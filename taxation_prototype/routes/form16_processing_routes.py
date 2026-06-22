@@ -20,6 +20,8 @@ Routes:
 
 import os
 import uuid
+import csv
+from datetime import datetime
 
 from flask import (
     Blueprint, render_template, session, redirect, url_for,
@@ -28,7 +30,7 @@ from flask import (
 from functools import wraps
 
 from config import (
-    CURRENT_FY, CSV_FORM16_PROCESSING_LOG, FORM16_PROCESSING_FOLDER
+    CURRENT_FY, CSV_FORM16_PROCESSING_LOG, CSV_FORM16_APPROVED, FORM16_PROCESSING_FOLDER
 )
 from services.form16_processing_service import (
     validate_tan,
@@ -93,6 +95,7 @@ SESSION_TAN_KEY        = "f16p_tan"           # Stores TAN string (RAM only)
 SESSION_ID_KEY         = "f16p_session_id"    # Stores processing session UUID
 SESSION_PROCESSED_KEY  = "f16p_has_results"   # Bool — results exist for this session
 SESSION_MERGED_KEY     = "f16p_has_merge"     # Bool — merge results exist for this session
+SESSION_APPROVED_KEY    = "f16p_approved"      # List of approved Form16 records
 
 
 # ─────────────────────────────────────────────────────────────
@@ -122,6 +125,7 @@ def dashboard():
     processing_session_id = session.get(SESSION_ID_KEY)
     has_results = session.get(SESSION_PROCESSED_KEY, False)
     has_merge   = session.get(SESSION_MERGED_KEY, False)
+    approved_count = len(session.get(SESSION_APPROVED_KEY, []))
 
     dashboard_data = None
     if has_results and processing_session_id:
@@ -147,6 +151,7 @@ def dashboard():
         has_merge=has_merge,
         dashboard_data=dashboard_data,
         merge_data=merge_data,
+        approved_count=approved_count,
         fy=CURRENT_FY,
         active_page="form16_processing",
     )
@@ -410,3 +415,122 @@ def download_all_merged():
         download_name=os.path.basename(result["zip_path"]),
         mimetype="application/zip"
     )
+
+
+# ═════════════════════════════════════════════════════════════
+# TASK 4 — APPROVAL ROUTES
+# Routes for HR to approve signed Form16 documents for distribution
+# ═════════════════════════════════════════════════════════════
+
+
+@form16_processing_bp.route("/approve", methods=["POST"])
+@hr_required
+def approve_form16():
+    """
+    Approve a signed Form16 document for employee distribution.
+    Stores approval record in session and logs to audit CSV.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "No JSON data provided"}), 400
+        
+        filename = data.get("filename")
+        pan = data.get("pan")
+        employee_name = data.get("employee_name")
+        
+        if not filename or not pan:
+            return jsonify({"status": "error", "message": "filename and pan are required"}), 400
+        
+        # Initialize approved records list in session if not exists
+        if SESSION_APPROVED_KEY not in session:
+            session[SESSION_APPROVED_KEY] = []
+        
+        # Check if already approved
+        approved_records = session[SESSION_APPROVED_KEY]
+        for record in approved_records:
+            if record.get("filename") == filename:
+                return jsonify({"status": "error", "message": "Document already approved"}), 400
+        
+        # Create approval record
+        approval_record = {
+            "pan": pan,
+            "employee_name": employee_name,
+            "filename": filename,
+            "approved_at": datetime.now().isoformat(),
+            "approved_by": session["user"].get("username", "hr_user")
+        }
+        
+        # Add to session
+        session[SESSION_APPROVED_KEY].append(approval_record)
+        session.modified = True
+        
+        # Persist to CSV for employee portal access
+        _persist_approval_to_csv(approval_record)
+        
+        # Log to audit CSV
+        _log_approval_to_csv(approval_record)
+        
+        return jsonify({"status": "success", "message": "Document approved successfully"})
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def _persist_approval_to_csv(record):
+    """
+    Persist approved Form16 record to CSV for employee portal access.
+    """
+    try:
+        file_exists = os.path.exists(CSV_FORM16_APPROVED)
+        
+        with open(CSV_FORM16_APPROVED, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            
+            # Write header if file is new
+            if not file_exists:
+                writer.writerow([
+                    "pan", "employee_name", "filename", "approved_at", "approved_by"
+                ])
+            
+            writer.writerow([
+                record.get("pan"),
+                record.get("employee_name"),
+                record.get("filename"),
+                record.get("approved_at"),
+                record.get("approved_by")
+            ])
+    except Exception as e:
+        # Log error but don't fail the approval
+        print(f"Error persisting approval to CSV: {e}")
+
+
+def _log_approval_to_csv(record):
+    """
+    Log approval action to the Form16 processing audit CSV.
+    """
+    try:
+        file_exists = os.path.exists(CSV_FORM16_PROCESSING_LOG)
+        
+        with open(CSV_FORM16_PROCESSING_LOG, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            
+            # Write header if file is new
+            if not file_exists:
+                writer.writerow([
+                    "timestamp", "action", "pan", "employee_name", 
+                    "filename", "approved_by", "approved_at"
+                ])
+            
+            writer.writerow([
+                datetime.now().isoformat(),
+                "APPROVE",
+                record.get("pan"),
+                record.get("employee_name"),
+                record.get("filename"),
+                record.get("approved_by"),
+                record.get("approved_at")
+            ])
+    except Exception as e:
+        # Log error but don't fail the approval
+        print(f"Error logging approval to CSV: {e}")

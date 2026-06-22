@@ -46,6 +46,7 @@ CSV_FORM24Q_HISTORY     = os.path.join(DUMMY_DATA_FOLDER, "form24q_history.csv")
 CSV_CHALLANS                = os.path.join(DUMMY_DATA_FOLDER, "challans.csv")
 CSV_DEDUCTOR_MASTER         = os.path.join(DUMMY_DATA_FOLDER, "deductor_master.csv")
 CSV_FORM16_PROCESSING_LOG   = os.path.join(DUMMY_DATA_FOLDER, "form16_processing_log.csv")
+CSV_FORM16_APPROVED         = os.path.join(DUMMY_DATA_FOLDER, "form16_approved.csv")
 
 
 # ──────────────────────────────────────────────

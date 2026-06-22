@@ -189,6 +189,53 @@
 
 </div>
 
+<!-- Approved Form16 PDFs -->
+{% if approved_form16s %}
+<div class="card mb-6">
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h2 class="section-title">Approved Form 16 PDFs</h2>
+      <p class="text-xs text-slate-400 mt-1">Digitally signed and approved by HR for download</p>
+    </div>
+    <span class="pill-badge pill-teal">{{ approved_form16s | length }} Approved</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-border">
+          <th class="th-cell">Employee Name</th>
+          <th class="th-cell">PAN</th>
+          <th class="th-cell">Filename</th>
+          <th class="th-cell">Approved On</th>
+          <th class="th-cell">Approved By</th>
+          <th class="th-cell">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border/50">
+        {% for record in approved_form16s %}
+        <tr class="hover:bg-white/[0.02] transition-colors">
+          <td class="td-cell">{{ record.employee_name }}</td>
+          <td class="td-cell font-mono text-xs text-brand-400">{{ record.pan }}</td>
+          <td class="td-cell font-mono text-xs text-slate-300">{{ record.filename }}</td>
+          <td class="td-cell text-slate-400 text-xs">{{ record.approved_at[:19].replace('T', ' ') }}</td>
+          <td class="td-cell text-slate-400 text-xs">{{ record.approved_by }}</td>
+          <td class="td-cell">
+            <a href="{{ url_for('employee.download_approved_form16', filename=record.filename) }}"
+               class="px-3 py-1 rounded bg-teal-600 hover:bg-teal-500 text-white font-medium text-xs transition-colors inline-flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Download PDF
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <!-- Download History -->
 <div class="card">
   <div class="flex items-center justify-between mb-5">

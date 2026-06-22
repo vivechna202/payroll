@@ -170,11 +170,28 @@ def form16_download():
     form16_records = get_form16_history(fy=fy, employee_id=user["employee_id"])
     form16_details = get_form16_details(user["employee_id"], fy)
     
+    # Get approved Form16 PDFs from CSV (persisted by HR)
+    import os
+    import csv
+    from config import CSV_FORM16_APPROVED
+    from services.csv_service import read_csv_row
+    
+    approved_form16s = []
+    if os.path.exists(CSV_FORM16_APPROVED):
+        with open(CSV_FORM16_APPROVED, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                # Filter to only show approved Form16s for this employee (by PAN)
+                employee_data = read_csv_row(CSV_EMPLOYEES, "employee_id", user["employee_id"])
+                if employee_data and row.get("pan") == employee_data.get("pan"):
+                    approved_form16s.append(row)
+    
     return render_template(
         "employee/form16_download.html",
         user=user,
         form16_records=form16_records,
         form16_details=form16_details,
+        approved_form16s=approved_form16s,
         fy=fy,
         active_page="form16_download",
     )
@@ -203,3 +220,51 @@ def download_form16(filename):
         abort(404)
         
     return send_from_directory(FORM16_FOLDER, filename, as_attachment=True)
+
+
+@employee_bp.route("/form16/download-approved/<filename>")
+@employee_required
+def download_approved_form16(filename):
+    """
+    Download an approved Form16 PDF (merged, signed, and approved by HR).
+    Only accessible to the employee whose PAN matches the approval record.
+    """
+    import os
+    from flask import send_file, abort
+    from config import FORM16_MERGED_FOLDER
+    from services.csv_service import read_csv_row
+    
+    user = session["user"]
+    
+    # Get employee PAN
+    employee_data = read_csv_row(CSV_EMPLOYEES, "employee_id", user["employee_id"])
+    if not employee_data:
+        abort(403)
+    
+    employee_pan = employee_data.get("pan")
+    
+    # Check if this file is approved for this employee
+    approved_form16s = session.get("f16p_approved", [])
+    approved_record = next((r for r in approved_form16s if r.get("filename") == filename and r.get("pan") == employee_pan), None)
+    
+    if not approved_record:
+        abort(403)
+    
+    # Find the file in the merged folder (need to determine which session folder)
+    # For now, search in all session folders
+    if not os.path.exists(FORM16_MERGED_FOLDER):
+        abort(404)
+    
+    file_path = None
+    for session_folder in os.listdir(FORM16_MERGED_FOLDER):
+        session_path = os.path.join(FORM16_MERGED_FOLDER, session_folder)
+        if os.path.isdir(session_path):
+            potential_path = os.path.join(session_path, filename)
+            if os.path.exists(potential_path):
+                file_path = potential_path
+                break
+    
+    if not file_path:
+        abort(404)
+    
+    return send_file(file_path, as_attachment=True, download_name=filename, mimetype="application/pdf")
