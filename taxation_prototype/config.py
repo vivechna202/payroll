@@ -26,8 +26,10 @@ FORM16_FOLDER = os.path.join(GENERATED_FOLDER, "form16")
 FORM24Q_FOLDER = os.path.join(GENERATED_FOLDER, "form24q")
 DUMMY_DATA_FOLDER = os.path.join(BASE_DIR, "dummy_data")
 CSI_FOLDER = os.path.join(UPLOAD_FOLDER, "csi")
+CERTIFICATE_FOLDER = os.path.join(UPLOAD_FOLDER, "certificates")
 FORM16_PROCESSING_FOLDER = os.path.join(UPLOAD_FOLDER, "form16_processing")
 FORM16_MERGED_FOLDER     = os.path.join(GENERATED_FOLDER, "form16_merged")
+FORM16_SIGNED_FOLDER     = os.path.join(UPLOAD_FOLDER, "signed")
 # ──────────────────────────────────────────────
 # CSV file paths  (swap with DB tables in Phase 2)
 # ──────────────────────────────────────────────

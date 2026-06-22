@@ -1212,6 +1212,45 @@
 
   </div>{# end right column #}
 </div>
+<!-- Certificate Upload Modal -->
+<div id="cert-upload-modal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center hidden z-50">
+  <div class="card max-w-md w-full mx-4">
+    <h3 class="text-lg font-bold mb-4">Configure Signing Certificate</h3>
+    <p class="text-sm text-slate-400 mb-6">Please upload a valid .pfx or .p12 certificate file to enable digital signing.</p>
+    <form id="cert-upload-form" onsubmit="submitCertUpload(event)">
+      <div class="mb-4">
+        <label class="block text-sm text-slate-300 mb-1">Certificate File (.pfx / .p12)</label>
+        <input type="file" name="certificate" accept=".pfx,.p12" required class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-2 text-sm text-white">
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm text-slate-300 mb-1">Certificate Password</label>
+        <input type="password" name="password" required class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-2 text-sm text-white">
+      </div>
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="document.getElementById('cert-upload-modal').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-slate-700 text-sm font-medium">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium">Upload & Sign</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Password Only Modal -->
+<div id="cert-password-modal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center hidden z-50">
+  <div class="card max-w-md w-full mx-4">
+    <h3 class="text-lg font-bold mb-4">Digital Signature Password</h3>
+    <p class="text-sm text-slate-400 mb-6">Enter the password for the configured certificate to sign the documents.</p>
+    <form id="cert-pwd-form" onsubmit="submitCertPassword(event)">
+      <div class="mb-6">
+        <label class="block text-sm text-slate-300 mb-1">Password</label>
+        <input type="password" id="cert-pwd" required class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-2 text-sm text-white">
+      </div>
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="document.getElementById('cert-password-modal').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-slate-700 text-sm font-medium">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium">Sign Documents</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 {% endblock %}
 
@@ -1576,191 +1615,149 @@ function updateBulkPublishButton() {
   }
 }
 
-async function signDocument(filename, pan) {
-  const btn = document.querySelector(`.sign-btn[data-pan="${pan}"]`);
-  if (!btn) {
-    console.error('Sign button not found for PAN:', pan);
-    return;
-  }
-  
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>&nbsp;Signing…';
-  
+let pendingSignRequests = [];
+
+async function triggerSigningFlow(requests) {
+  pendingSignRequests = requests;
   try {
-    const response = await fetch(`${DSC_AGENT_URL}/sign`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        file_path: filename,
-        certificate_id: 'cert_1'
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (data.status === 'success') {
-      // Update merge status badge to SIGNED
-      const badge = document.querySelector(`.merge-status-badge[data-pan="${pan}"]`);
-      if (badge) {
-        badge.className = 'badge badge-signed';
-        badge.innerHTML = `
-          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-          SIGNED
-        `;
-      } else {
-        console.error('Badge not found for PAN:', pan);
-      }
-      
-      // Update row status attribute
-      const row = btn.closest('tr');
-      if (row) {
-        row.dataset.status = 'signed';
-      }
-      
-      // Disable the sign button
-      btn.disabled = true;
-      btn.innerHTML = `
-        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-        Signed
-      `;
-      btn.classList.remove('btn-sign');
-      btn.classList.add('btn-dl');
-      btn.style.background = 'rgba(99,102,241,0.12)';
-      btn.style.borderColor = 'rgba(99,102,241,0.3)';
-      btn.style.color = '#818cf8';
-      
-      // Show Approve button
-      const approveBtn = document.querySelector(`.approve-btn[data-pan="${pan}"]`);
-      if (approveBtn) {
-        approveBtn.style.display = 'inline-flex';
-      }
-      
-      // Update signed count
-      signedCount++;
-      updateSigningCounters();
-      updateBulkApproveButton();
-      
-      alert(`Success: ${filename} signed successfully (mock)`);
+    const res = await fetch('/hr/form16-processing/check-certificate');
+    const data = await res.json();
+    if (data.configured) {
+      document.getElementById('cert-password-modal').classList.remove('hidden');
     } else {
-      throw new Error(data.message || 'Signing failed');
+      document.getElementById('cert-upload-modal').classList.remove('hidden');
     }
-  } catch (error) {
-    console.error('Sign error:', error);
-    alert(`Error: Failed to sign ${filename}. Make sure DSC Agent is running at ${DSC_AGENT_URL}`);
-    btn.disabled = false;
-    btn.innerHTML = originalText;
+  } catch (e) {
+    alert("Error checking certificate: " + e.message);
   }
 }
 
-async function bulkSignSelected() {
-  const checkboxes = document.querySelectorAll('.merged-checkbox:checked');
-  const bulkBtn = document.getElementById('bulk-sign-btn');
-  
-  if (checkboxes.length === 0) return;
-  
-  const originalText = bulkBtn.innerHTML;
-  bulkBtn.disabled = true;
-  bulkBtn.innerHTML = '<span class="spinner"></span>&nbsp;Signing…';
-  
+async function executeSigning(password) {
   let successCount = 0;
   let failCount = 0;
   const errors = [];
   
-  for (const checkbox of checkboxes) {
-    const filename = checkbox.dataset.filename;
-    const row = checkbox.closest('tr');
-    const pan = row.dataset.pan;
-    const status = row.dataset.status;
-    const badge = row.querySelector('.merge-status-badge');
-    
-    // Only sign MERGED documents (not already SIGNED or APPROVED)
-    if (status === 'signed' || status === 'approved' || 
-        (badge && (badge.classList.contains('badge-signed') || badge.classList.contains('badge-approved')))) {
-      continue;
+  for (const req of pendingSignRequests) {
+    const {filename, pan} = req;
+    const btn = document.querySelector(`.sign-btn[data-pan="${pan}"]`);
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>&nbsp;Signing…';
     }
     
     try {
-      const response = await fetch(`${DSC_AGENT_URL}/sign`, {
+      const response = await fetch('/hr/form16-processing/sign', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          file_path: filename,
-          certificate_id: 'cert_1'
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, password })
       });
-      
       const data = await response.json();
       
       if (data.status === 'success') {
         successCount++;
-        // Update merge status badge to SIGNED
         const badge = document.querySelector(`.merge-status-badge[data-pan="${pan}"]`);
         if (badge) {
           badge.className = 'badge badge-signed';
-          badge.innerHTML = `
-            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-            SIGNED
-          `;
-        } else {
-          console.error('Badge not found for PAN:', pan);
+          badge.innerHTML = `<svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>SIGNED`;
         }
+        const row = badge ? badge.closest('tr') : null;
+        if (row) row.dataset.status = 'signed';
         
-        // Update row status attribute
-        if (row) {
-          row.dataset.status = 'signed';
-        }
-        
-        // Update individual sign button
-        const btn = document.querySelector(`.sign-btn[data-pan="${pan}"]`);
         if (btn) {
           btn.disabled = true;
-          btn.innerHTML = `
-            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-            Signed
-          `;
+          btn.innerHTML = `<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Signed`;
           btn.classList.remove('btn-sign');
           btn.classList.add('btn-dl');
           btn.style.background = 'rgba(99,102,241,0.12)';
           btn.style.borderColor = 'rgba(99,102,241,0.3)';
           btn.style.color = '#818cf8';
-        } else {
-          console.error('Sign button not found for PAN:', pan);
         }
         
-        // Show Approve button
         const approveBtn = document.querySelector(`.approve-btn[data-pan="${pan}"]`);
-        if (approveBtn) {
-          approveBtn.style.display = 'inline-flex';
-        }
+        if (approveBtn) approveBtn.style.display = 'inline-flex';
         
-        // Uncheck the checkbox
-        checkbox.checked = false;
+        const checkbox = document.querySelector(`.merged-checkbox[data-filename="${filename}"]`);
+        if (checkbox) checkbox.checked = false;
+        
       } else {
         failCount++;
-        errors.push(`${filename}: ${data.message || 'Unknown error'}`);
+        errors.push(`${filename}: ${data.message}`);
+        if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
       }
-    } catch (error) {
+    } catch (e) {
       failCount++;
-      errors.push(`${filename}: ${error.message}`);
+      errors.push(`${filename}: ${e.message}`);
+      if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
     }
   }
   
-  // Update signed count
   signedCount += successCount;
   updateSigningCounters();
   updateBulkApproveButton();
-  
-  bulkBtn.disabled = false;
-  bulkBtn.innerHTML = originalText;
   updateBulkSignButton();
   
-  // Show summary
-  alert(`Bulk Sign Complete:\n✓ Success: ${successCount}\n✗ Failed: ${failCount}${errors.length > 0 ? '\n\nErrors:\n' + errors.slice(0, 5).join('\n') : ''}`);
+  if (pendingSignRequests.length > 1) {
+    alert(`Bulk Sign Complete:\n✓ Success: ${successCount}\n✗ Failed: ${failCount}${errors.length > 0 ? '\n\nErrors:\n' + errors.slice(0, 5).join('\n') : ''}`);
+  } else if (successCount === 1) {
+    alert(`Success: Document signed successfully`);
+  } else {
+    alert(`Error: Document signing failed.\n${errors.join('\n')}`);
+  }
+}
+
+async function signDocument(filename, pan) {
+  triggerSigningFlow([{filename, pan}]);
+}
+
+async function bulkSignSelected() {
+  const checkboxes = document.querySelectorAll('.merged-checkbox:checked');
+  if (checkboxes.length === 0) return;
+  const requests = [];
+  for (const checkbox of checkboxes) {
+    const row = checkbox.closest('tr');
+    if (row.dataset.status === 'signed' || row.dataset.status === 'approved' || row.dataset.status === 'published') continue;
+    requests.push({ filename: checkbox.dataset.filename, pan: row.dataset.pan });
+  }
+  if (requests.length > 0) {
+    triggerSigningFlow(requests);
+  }
+}
+
+async function submitCertUpload(e) {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+  
+  // Disable button to prevent double submit
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const oldText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = 'Uploading...';
+  
+  try {
+    const res = await fetch('/hr/form16-processing/upload-certificate', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.status === 'success') {
+      document.getElementById('cert-upload-modal').classList.add('hidden');
+      executeSigning(formData.get('password'));
+    } else {
+      alert("Error: " + data.message);
+    }
+  } catch (err) {
+    alert("Upload failed: " + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = oldText;
+  }
+}
+
+async function submitCertPassword(e) {
+  e.preventDefault();
+  const pwd = document.getElementById('cert-pwd').value;
+  document.getElementById('cert-password-modal').classList.add('hidden');
+  document.getElementById('cert-pwd').value = '';
+  executeSigning(pwd);
 }
 
 // ── Approval Functions ───────────────────────────────────

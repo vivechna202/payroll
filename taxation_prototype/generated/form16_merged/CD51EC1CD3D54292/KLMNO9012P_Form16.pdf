@@ -8,8 +8,8 @@ endobj
 2 0 obj
 <<
 /Type /Pages
-/Count 1
-/Kids [ 4 0 R ]
+/Count 2
+/Kids [ 4 0 R 6 0 R ]
 >>
 endobj
 3 0 obj
@@ -47,24 +47,59 @@ BT
 (Employee Name: Amit Verma) Tj T*
 (PAN: KLMNO9012P) Tj T*
 (Financial Year: 2025-2026) Tj T*
+(Part_Type: A) Tj T*
+ET
+endstream
+endobj
+6 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+>>
+>>
+/MediaBox [ 0 0 595 842 ]
+/Contents 7 0 R
+/Parent 2 0 R
+>>
+endobj
+7 0 obj
+<<
+/Length 144
+>>
+stream
+BT
+/F1 12 Tf
+50 750 Td
+16 TL
+(Employee Name: Amit Verma) Tj T*
+(PAN: KLMNO9012P) Tj T*
+(Financial Year: 2025-2026) Tj T*
 (Part_Type: B) Tj T*
 ET
 endstream
 endobj
 xref
-0 6
+0 8
 0000000000 65535 f 
 0000000015 00000 n 
 0000000054 00000 n 
-0000000113 00000 n 
-0000000162 00000 n 
-0000000339 00000 n 
+0000000119 00000 n 
+0000000168 00000 n 
+0000000345 00000 n 
+0000000540 00000 n 
+0000000717 00000 n 
 trailer
 <<
-/Size 6
+/Size 8
 /Root 3 0 R
 /Info 1 0 R
 >>
 startxref
-534
+912
 %%EOF

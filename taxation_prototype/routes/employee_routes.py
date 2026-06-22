@@ -230,7 +230,7 @@ def download_approved_form16(filename):
     """
     import os
     from flask import send_file, abort
-    from config import FORM16_MERGED_FOLDER
+    from config import FORM16_SIGNED_FOLDER
     from services.csv_service import read_csv_row
     
     user = session["user"]
@@ -258,14 +258,14 @@ def download_approved_form16(filename):
     if not published_record:
         abort(403)
     
-    # Find the file in the merged folder (need to determine which session folder)
+    # Find the file in the signed folder (need to determine which session folder)
     # For now, search in all session folders
-    if not os.path.exists(FORM16_MERGED_FOLDER):
+    if not os.path.exists(FORM16_SIGNED_FOLDER):
         abort(404)
     
     file_path = None
-    for session_folder in os.listdir(FORM16_MERGED_FOLDER):
-        session_path = os.path.join(FORM16_MERGED_FOLDER, session_folder)
+    for session_folder in os.listdir(FORM16_SIGNED_FOLDER):
+        session_path = os.path.join(FORM16_SIGNED_FOLDER, session_folder)
         if os.path.isdir(session_path):
             potential_path = os.path.join(session_path, filename)
             if os.path.exists(potential_path):

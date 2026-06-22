@@ -459,6 +459,16 @@ def approve_form16():
             if record.get("filename") == filename:
                 return jsonify({"status": "error", "message": "Document already approved"}), 400
         
+        # Verify signed PDF exists
+        processing_session_id = session.get(SESSION_ID_KEY)
+        if not processing_session_id:
+            return jsonify({"status": "error", "message": "No processing session found"}), 400
+            
+        from config import FORM16_SIGNED_FOLDER
+        session_signed_out = os.path.join(FORM16_SIGNED_FOLDER, processing_session_id)
+        if not os.path.exists(os.path.join(session_signed_out, filename)):
+            return jsonify({"status": "error", "message": "Signed PDF not found. Document must be signed before approval."}), 400
+        
         # Create approval record
         approval_record = {
             "pan": pan,
@@ -544,6 +554,82 @@ def _log_approval_to_csv(record):
     except Exception as e:
         # Log error but don't fail the approval
         print(f"Error logging approval to CSV: {e}")
+
+
+# ═════════════════════════════════════════════════════════════
+# TASK 5 — SIGNING & PUBLISH ROUTES
+# ═════════════════════════════════════════════════════════════
+
+@form16_processing_bp.route("/check-certificate", methods=["GET"])
+@hr_required
+def check_certificate():
+    from services.sign_service import has_certificate
+    return jsonify({"configured": has_certificate()})
+
+
+@form16_processing_bp.route("/upload-certificate", methods=["POST"])
+@hr_required
+def upload_certificate():
+    from services.sign_service import save_certificate
+    if "certificate" not in request.files:
+        return jsonify({"status": "error", "message": "No file uploaded"}), 400
+        
+    file_obj = request.files["certificate"]
+    password = request.form.get("password")
+    
+    if not password:
+        return jsonify({"status": "error", "message": "Password is required"}), 400
+        
+    try:
+        save_certificate(file_obj)
+        # Store password in session temporarily for this session's bulk signing if needed, 
+        # or just return success and require password for each sign.
+        # Actually, for bulk signing we usually ask once. 
+        # The user's request: "Ask for certificate password. Proceed with signing flow."
+        return jsonify({"status": "success", "message": "Certificate configured successfully"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@form16_processing_bp.route("/sign", methods=["POST"])
+@hr_required
+def sign_form16():
+    """Sign the document cryptographically using pyHanko."""
+    from services.sign_service import sign_pdf
+    from config import FORM16_MERGED_FOLDER, FORM16_SIGNED_FOLDER
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "No data provided"}), 400
+            
+        filename = data.get("filename")
+        password = data.get("password")
+        
+        if not filename or not password:
+            return jsonify({"status": "error", "message": "Filename and password are required"}), 400
+            
+        processing_session_id = session.get(SESSION_ID_KEY)
+        if not processing_session_id:
+            return jsonify({"status": "error", "message": "No active session"}), 400
+            
+        session_merged_out = os.path.join(FORM16_MERGED_FOLDER, processing_session_id)
+        session_signed_out = os.path.join(FORM16_SIGNED_FOLDER, processing_session_id)
+        os.makedirs(session_signed_out, exist_ok=True)
+        
+        input_pdf = os.path.join(session_merged_out, filename)
+        output_pdf = os.path.join(session_signed_out, filename)
+        
+        if not os.path.exists(input_pdf):
+            return jsonify({"status": "error", "message": f"Merged PDF not found for {filename}"}), 404
+            
+        sign_pdf(input_pdf, output_pdf, password)
+        return jsonify({"status": "success", "message": "Document signed successfully"})
+        
+    except ValueError as ve:
+        return jsonify({"status": "error", "message": str(ve)}), 401
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @form16_processing_bp.route("/publish", methods=["POST"])
 @hr_required
