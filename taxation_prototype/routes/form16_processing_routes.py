@@ -493,11 +493,11 @@ def approve_form16():
         if SESSION_APPROVED_KEY not in session:
             session[SESSION_APPROVED_KEY] = []
         
-        # Check if already approved
+        # Check if already approved for this PAN + filename
         approved_records = session[SESSION_APPROVED_KEY]
         for record in approved_records:
-            if record.get("filename") == filename:
-                return jsonify({"status": "error", "message": "Document already approved"}), 400
+            if record.get("filename") == filename and record.get("pan") == pan:
+                return jsonify({"status": "error", "message": "Document already approved for this PAN"}), 400
         
         # Verify signed PDF exists
         processing_session_id = session.get(SESSION_ID_KEY)
@@ -514,6 +514,7 @@ def approve_form16():
             "pan": pan,
             "employee_name": employee_name,
             "filename": filename,
+            "session_id": processing_session_id,  # Store session_id for exact path lookup
             "approved_at": datetime.now().isoformat(),
             "approved_by": session["user"].get("username", "hr_user")
         }
@@ -540,8 +541,25 @@ def _persist_approval_to_csv(record):
     """
     try:
         file_exists = os.path.exists(CSV_FORM16_APPROVED)
-        fieldnames = ["pan", "employee_name", "filename", "approved_at", "approved_by", "published", "published_by", "published_at"]
+        fieldnames = ["pan", "employee_name", "filename", "approved_at", "approved_by", "published", "published_by", "published_at", "session_id"]
         write_header = not file_exists
+        
+        print(f"[DEBUG] _persist_approval_to_csv - FIELDNAMES: {fieldnames}")
+        
+        row_to_write = {
+            "pan": record.get("pan"),
+            "employee_name": record.get("employee_name"),
+            "filename": record.get("filename"),
+            "approved_at": record.get("approved_at"),
+            "approved_by": record.get("approved_by"),
+            "published": "False",
+            "published_by": "",
+            "published_at": "",
+            "session_id": record.get("session_id", "")
+        }
+        
+        print(f"[DEBUG] _persist_approval_to_csv - ROW: {row_to_write}")
+        print(f"[DEBUG] _persist_approval_to_csv - ROW KEYS: {list(row_to_write.keys())}")
         
         with open(CSV_FORM16_APPROVED, "a", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -550,19 +568,12 @@ def _persist_approval_to_csv(record):
             if write_header:
                 writer.writeheader()
             
-            writer.writerow({
-                "pan": record.get("pan"),
-                "employee_name": record.get("employee_name"),
-                "filename": record.get("filename"),
-                "approved_at": record.get("approved_at"),
-                "approved_by": record.get("approved_by"),
-                "published": "False",
-                "published_by": "",
-                "published_at": ""
-            })
+            writer.writerow(row_to_write)
     except Exception as e:
         # Log error but don't fail the approval
         print(f"Error persisting approval to CSV: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def _log_approval_to_csv(record):
@@ -705,21 +716,27 @@ def publish_form16():
             
         published_records = session[SESSION_PUBLISHED_KEY]
         for record in published_records:
-            if record.get("filename") == filename:
-                return jsonify({"status": "error", "message": "Document already published"}), 400
+            if record.get("filename") == filename and record.get("pan") == pan:
+                return jsonify({"status": "error", "message": "Document already published for this PAN"}), 400
                 
+        # Get current session ID to store the exact signed PDF path
+        processing_session_id = session.get(SESSION_ID_KEY)
+        
         publish_record = {
             "pan": pan,
             "employee_name": employee_name,
             "filename": filename,
+            "session_id": processing_session_id,  # Store session ID for exact path lookup
             "published_at": datetime.now().isoformat(),
             "published_by": session["user"].get("username", "hr_user")
         }
         
+        print(f"[DEBUG] Publish - Storing session_id: {processing_session_id} for filename: {filename}")
+        
         session[SESSION_PUBLISHED_KEY].append(publish_record)
         session.modified = True
         
-        _persist_publish_to_csv(filename, pan, session["user"].get("username", "hr_user"))
+        _persist_publish_to_csv(filename, pan, session["user"].get("username", "hr_user"), processing_session_id)
         _log_publish_to_csv(publish_record)
         
         return jsonify({"status": "success", "message": "Document published successfully"})
@@ -727,7 +744,7 @@ def publish_form16():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-def _persist_publish_to_csv(filename, pan, user_name):
+def _persist_publish_to_csv(filename, pan, user_name, session_id=None):
     import tempfile, shutil
     file_exists = os.path.exists(CSV_FORM16_APPROVED)
     if not file_exists:
@@ -738,27 +755,51 @@ def _persist_publish_to_csv(filename, pan, user_name):
         with open(CSV_FORM16_APPROVED, 'r', newline='', encoding='utf-8') as f, temp_file:
             reader = csv.DictReader(f)
             fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+            
+            print(f"[DEBUG] _persist_publish_to_csv - Initial fieldnames: {fieldnames}")
+            
+            # Add session_id to fieldnames if not present
+            if "session_id" not in fieldnames:
+                fieldnames.append("session_id")
             if "published" not in fieldnames:
                 fieldnames.extend(["published", "published_by", "published_at"])
+                
+            print(f"[DEBUG] _persist_publish_to_csv - Final fieldnames: {fieldnames}")
                 
             writer = csv.DictWriter(temp_file, fieldnames=fieldnames)
             writer.writeheader()
             
             for row in reader:
+                print(f"[DEBUG] _persist_publish_to_csv - ROW KEYS before cleanup: {list(row.keys())}")
+                
+                # Remove None keys from row
+                row = {k: v for k, v in row.items() if k is not None}
+                
                 if row.get("filename") == filename and row.get("pan") == pan:
                     row["published"] = "True"
                     row["published_by"] = user_name
                     row["published_at"] = datetime.now().isoformat()
+                    if session_id:
+                        row["session_id"] = session_id
                 
                 if "published" not in row: row["published"] = "False"
                 if "published_by" not in row: row["published_by"] = ""
                 if "published_at" not in row: row["published_at"] = ""
+                if "session_id" not in row: row["session_id"] = ""
+                
+                print(f"[DEBUG] _persist_publish_to_csv - FIELDNAMES: {fieldnames}")
+                print(f"[DEBUG] _persist_publish_to_csv - ROW: {row}")
+                print(f"[DEBUG] _persist_publish_to_csv - ROW KEYS: {list(row.keys())}")
+                
                 writer.writerow(row)
                 
         shutil.move(temp_file.name, CSV_FORM16_APPROVED)
+        print(f"[DEBUG] Persisted publish to CSV - filename: {filename}, session_id: {session_id}")
         return True
     except Exception as e:
         print(f"Error publishing to CSV: {e}")
+        import traceback
+        traceback.print_exc()
         if os.path.exists(temp_file.name):
             os.unlink(temp_file.name)
         return False

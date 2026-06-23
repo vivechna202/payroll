@@ -251,33 +251,42 @@ def download_approved_form16(filename):
     if os.path.exists(CSV_FORM16_APPROVED):
         with open(CSV_FORM16_APPROVED, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
+            # Find all matching records and get the most recent one by published_at
+            matching_records = []
             for row in reader:
                 if row.get("filename") == filename and row.get("pan") == employee_pan and row.get("published") == "True":
-                    published_record = row
-                    break
+                    matching_records.append(row)
+            
+            if matching_records:
+                # Sort by published_at (most recent first)
+                matching_records.sort(key=lambda x: x.get("published_at", ""), reverse=True)
+                published_record = matching_records[0]
+                print(f"[DEBUG] Found {len(matching_records)} matching records, using most recent from: {published_record.get('published_at')}")
     
     if not published_record:
         print(f"[DEBUG] No published record found in CSV ({CSV_FORM16_APPROVED}) for filename={filename}, pan={employee_pan}")
         abort(403)
     
-    # Find the file in the signed folder (need to determine which session folder)
-    # For now, search in all session folders
+    # Get session_id from published record for exact path lookup
+    session_id = published_record.get("session_id")
+    
+    # Construct exact path using session_id (no fallback search)
     file_path = None
-    if os.path.exists(FORM16_SIGNED_FOLDER):
-        for session_folder in os.listdir(FORM16_SIGNED_FOLDER):
-            session_path = os.path.join(FORM16_SIGNED_FOLDER, session_folder)
-            if os.path.isdir(session_path):
-                potential_path = os.path.join(session_path, filename)
-                if os.path.exists(potential_path):
-                    file_path = potential_path
-                    break
+    if session_id:
+        file_path = os.path.join(FORM16_SIGNED_FOLDER, session_id, filename)
+        print(f"[DEBUG] Using session_id from CSV: {session_id}")
+        print(f"[DEBUG] Constructed path: {file_path}")
+    else:
+        print(f"[ERROR] No session_id in CSV - cannot determine exact file path")
+        flash("Form 16 record is missing session information. Please contact HR.", "danger")
+        return redirect(url_for("employee.form16_download"))
     
     # Debug logs requested:
     # * Stored path (from config/database)
     # * Download path
     # * File exists
     # * File size
-    stored_path_log = CSV_FORM16_APPROVED
+    stored_path_log = f"CSV: {CSV_FORM16_APPROVED}, session_id: {session_id}"
     download_path_log = file_path if file_path else "Not found in signed folder"
     file_exists_log = os.path.exists(file_path) if file_path else False
     file_size_log = os.path.getsize(file_path) if (file_path and file_exists_log) else 0

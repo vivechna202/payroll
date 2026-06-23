@@ -1,0 +1,79 @@
+[
+  {
+    "pan": "ABCDE1234F",
+    "employee_name": "Aarav Sharma",
+    "financial_year": "2025-26",
+    "merge_status": "merged",
+    "output_filename": "ABCDE1234F_Form16.pdf",
+    "output_path": "C:\\Users\\Vivechna Singh\\Desktop\\HR\\taxation_prototype\\generated\\form16_merged\\C8DB476E4F564921\\ABCDE1234F_Form16.pdf",
+    "pages": 2,
+    "error": null,
+    "merged_at": "2026-06-23T11:32:05.941113"
+  },
+  {
+    "pan": "FGHIJ5678K",
+    "employee_name": "Priya Patel",
+    "financial_year": "2025-26",
+    "merge_status": "merged",
+    "output_filename": "FGHIJ5678K_Form16.pdf",
+    "output_path": "C:\\Users\\Vivechna Singh\\Desktop\\HR\\taxation_prototype\\generated\\form16_merged\\C8DB476E4F564921\\FGHIJ5678K_Form16.pdf",
+    "pages": 2,
+    "error": null,
+    "merged_at": "2026-06-23T11:32:05.992379"
+  },
+  {
+    "pan": "KLMNO9012P",
+    "employee_name": "Amit Verma",
+    "financial_year": "2025-26",
+    "merge_status": "merged",
+    "output_filename": "KLMNO9012P_Form16.pdf",
+    "output_path": "C:\\Users\\Vivechna Singh\\Desktop\\HR\\taxation_prototype\\generated\\form16_merged\\C8DB476E4F564921\\KLMNO9012P_Form16.pdf",
+    "pages": 2,
+    "error": null,
+    "merged_at": "2026-06-23T11:32:06.053627"
+  },
+  {
+    "pan": "QRSTU3456V",
+    "employee_name": "Sneha Reddy",
+    "financial_year": "2025-26",
+    "merge_status": "merged",
+    "output_filename": "QRSTU3456V_Form16.pdf",
+    "output_path": "C:\\Users\\Vivechna Singh\\Desktop\\HR\\taxation_prototype\\generated\\form16_merged\\C8DB476E4F564921\\QRSTU3456V_Form16.pdf",
+    "pages": 2,
+    "error": null,
+    "merged_at": "2026-06-23T11:32:06.113977"
+  },
+  {
+    "pan": "WXYZA7890B",
+    "employee_name": "Vikram Malhotra",
+    "financial_year": "2025-26",
+    "merge_status": "merged",
+    "output_filename": "WXYZA7890B_Form16.pdf",
+    "output_path": "C:\\Users\\Vivechna Singh\\Desktop\\HR\\taxation_prototype\\generated\\form16_merged\\C8DB476E4F564921\\WXYZA7890B_Form16.pdf",
+    "pages": 2,
+    "error": null,
+    "merged_at": "2026-06-23T11:32:06.160965"
+  },
+  {
+    "pan": "BCDEF1122G",
+    "employee_name": "Rohan Gupta",
+    "financial_year": "2025-26",
+    "merge_status": "skipped",
+    "output_filename": null,
+    "output_path": null,
+    "pages": 0,
+    "error": "Skipped \u2014 status: Missing Part B",
+    "merged_at": null
+  },
+  {
+    "pan": "CDEFG3344H",
+    "employee_name": "Ananya Rao",
+    "financial_year": "2025-26",
+    "merge_status": "skipped",
+    "output_filename": null,
+    "output_path": null,
+    "pages": 0,
+    "error": "Skipped \u2014 status: Missing Part A",
+    "merged_at": null
+  }
+]

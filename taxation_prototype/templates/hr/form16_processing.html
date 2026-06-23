@@ -1102,10 +1102,10 @@
           </thead>
           <tbody>
             {% for mr in merge_data.merge_results %}
-            <tr data-pan="{{ mr.pan }}" data-filename="{{ mr.output_filename or '' }}" data-merge-status="{{ mr.merge_status }}">
+            <tr data-pan="{{ mr.pan }}" data-filename="{{ mr.output_filename or '' }}" data-merge-status="{{ mr.merge_status }}" data-status="MERGED">
               <td>
                 {% if mr.merge_status == 'merged' and mr.output_filename %}
-                  <input type="checkbox" class="sign-checkbox merged-checkbox" data-filename="{{ mr.output_filename }}" data-pan="{{ mr.pan }}" onchange="updateBulkSignButton()">
+                  <input type="checkbox" class="sign-checkbox merged-checkbox" data-filename="{{ mr.output_filename }}" data-pan="{{ mr.pan }}" onchange="updateBulkButtons()">
                 {% endif %}
               </td>
               <td class="font-mono text-xs font-bold text-white">{{ mr.pan }}</td>
@@ -1113,7 +1113,7 @@
               <td class="text-slate-400 text-xs">{{ mr.financial_year }}</td>
               <td>
                 {% if mr.merge_status == 'merged' %}
-                  <span class="badge badge-merged merge-status-badge" data-pan="{{ mr.pan }}">
+                  <span class="badge badge-merged merge-status-badge workflow-status-badge" data-pan="{{ mr.pan }}">
                     <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                     Merged
                   </span>
