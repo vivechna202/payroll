@@ -229,7 +229,7 @@ def download_approved_form16(filename):
     Only accessible to the employee whose PAN matches the approval record.
     """
     import os
-    from flask import send_file, abort
+    from flask import send_file, abort, flash, redirect, url_for
     from config import FORM16_SIGNED_FOLDER
     from services.csv_service import read_csv_row
     
@@ -238,6 +238,7 @@ def download_approved_form16(filename):
     # Get employee PAN
     employee_data = read_csv_row(CSV_EMPLOYEES, "employee_id", user["employee_id"])
     if not employee_data:
+        print("[DEBUG] Employee data not found for ID:", user["employee_id"])
         abort(403)
     
     employee_pan = employee_data.get("pan")
@@ -256,23 +257,45 @@ def download_approved_form16(filename):
                     break
     
     if not published_record:
+        print(f"[DEBUG] No published record found in CSV ({CSV_FORM16_APPROVED}) for filename={filename}, pan={employee_pan}")
         abort(403)
     
     # Find the file in the signed folder (need to determine which session folder)
     # For now, search in all session folders
-    if not os.path.exists(FORM16_SIGNED_FOLDER):
-        abort(404)
-    
     file_path = None
-    for session_folder in os.listdir(FORM16_SIGNED_FOLDER):
-        session_path = os.path.join(FORM16_SIGNED_FOLDER, session_folder)
-        if os.path.isdir(session_path):
-            potential_path = os.path.join(session_path, filename)
-            if os.path.exists(potential_path):
-                file_path = potential_path
-                break
+    if os.path.exists(FORM16_SIGNED_FOLDER):
+        for session_folder in os.listdir(FORM16_SIGNED_FOLDER):
+            session_path = os.path.join(FORM16_SIGNED_FOLDER, session_folder)
+            if os.path.isdir(session_path):
+                potential_path = os.path.join(session_path, filename)
+                if os.path.exists(potential_path):
+                    file_path = potential_path
+                    break
     
-    if not file_path:
-        abort(404)
+    # Debug logs requested:
+    # * Stored path (from config/database)
+    # * Download path
+    # * File exists
+    # * File size
+    stored_path_log = CSV_FORM16_APPROVED
+    download_path_log = file_path if file_path else "Not found in signed folder"
+    file_exists_log = os.path.exists(file_path) if file_path else False
+    file_size_log = os.path.getsize(file_path) if (file_path and file_exists_log) else 0
     
+    print(f"[DEBUG] Stored path: {stored_path_log}")
+    print(f"[DEBUG] Download path: {download_path_log}")
+    print(f"[DEBUG] File exists: {file_exists_log}")
+    print(f"[DEBUG] File size: {file_size_log} bytes")
+    
+    # Strict validation of existence and size
+    if not file_path or not file_exists_log:
+        print(f"[ERROR] Signed PDF not found at: {file_path}")
+        flash("Signed Form 16 PDF not found on the server. Please contact HR.", "danger")
+        return redirect(url_for("employee.form16_download"))
+        
+    if file_size_log == 0:
+        print(f"[ERROR] Signed PDF is empty (0 bytes) at: {file_path}")
+        flash("The signed Form 16 PDF is empty. Please contact HR to regenerate and re-sign.", "danger")
+        return redirect(url_for("employee.form16_download"))
+        
     return send_file(file_path, as_attachment=True, download_name=filename, mimetype="application/pdf")

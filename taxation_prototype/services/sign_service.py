@@ -2,7 +2,6 @@ import os
 import glob
 from pyhanko.sign import signers, fields
 from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
-from pyhanko.pdf_utils import generic
 from pyhanko.pdf_utils.layout import BoxConstraints
 
 from config import CERTIFICATE_FOLDER, FORM16_SIGNED_FOLDER
@@ -66,42 +65,82 @@ def sign_pdf(input_pdf_path, output_pdf_path, cert_password):
         
     # Load certificate using ONLY SimpleSigner.load_pkcs12 (no CA chain, no trust validation)
     try:
-        signer = signers.SimpleSigner.load_pkcs12(cert_path, cert_password.encode('utf-8'))
+        print(f"[DEBUG] Loading certificate from: {cert_path}")
+        print(f"[DEBUG] Certificate file exists: {os.path.exists(cert_path)}")
+        
+        # Explicitly pass None for ca_chain to prevent CA chain loading
+        signer = signers.SimpleSigner.load_pkcs12(
+            cert_path, 
+             passphrase=cert_password.encode("utf-8") #Explicitly disable CA chain loading
+        )
+        print("Signer:", signer)
+        print(f"[DEBUG] Certificate loaded successfully from: {cert_path}")
+        print(f"[DEBUG] Signer type: {type(signer)}")
     except Exception as e:
+        print(f"[ERROR] Failed to load certificate: {e}")
+        import traceback
+        traceback.print_exc()
         raise ValueError(f"Invalid certificate or password: {e}")
+    
+    # Explicit validation: ensure signer is not None
+    if signer is None:
+        print(f"[ERROR] Signer is None after certificate loading")
+        raise ValueError("Certificate not loaded or invalid")
+    
+    print(f"[DEBUG] Signer object initialized successfully")
 
     try:
+        print(f"[DEBUG] Starting PDF signing process")
+        print(f"[DEBUG] Input PDF: {input_pdf_path}")
+        print(f"[DEBUG] Output PDF: {output_pdf_path}")
+        
         with open(input_pdf_path, 'rb') as doc_in:
             w = IncrementalPdfFileWriter(doc_in)
+            print(f"[DEBUG] IncrementalPdfFileWriter initialized")
             
             # Check if signature field exists, create if not
             field_name = 'Signature1'
             acro_form = w.root.get('/AcroForm')
-            fields_dict = acro_form.get('/Fields') if acro_form else None
             
             field_exists = False
-            if fields_dict:
-                for field_ref in fields_dict:
-                    field = field_ref.get_object()
-                    if field.get('/T') == field_name:
-                        field_exists = True
-                        break
+            if acro_form:
+                fields_arr = acro_form.get('/Fields')
+                if fields_arr:
+                    for field_ref in fields_arr:
+                        field = field_ref.get_object() if hasattr(field_ref, 'get_object') else field_ref
+                        if isinstance(field, dict):
+                            t_val = field.get('/T')
+                            if t_val == field_name or t_val == field_name.encode('utf-8'):
+                                field_exists = True
+                                break
+            
+            print(f"[DEBUG] Signature field exists: {field_exists}")
             
             if not field_exists:
                 # Create signature field automatically
+                print(f"[DEBUG] Creating signature field")
                 sig_field_spec = fields.SigFieldSpec(
-                    field_name=field_name,
-                    box=BoxConstraints(width=200, height=50)
+                    field_name,
+                    on_page=0,
+                    box=(400, 50, 600, 100)
                 )
-                sig_field_spec.embed(
-                    w, 
-                    page=0,  # Add to first page
-                    x=400, y=50  # Position on page (adjust as needed)
+                fields.append_signature_field(
+                    w,
+                    sig_field_spec
                 )
+                print(f"[DEBUG] Signature field created successfully")
             
+            print(f"[DEBUG] Preparing signature metadata")
+            meta = signers.PdfSignatureMetadata(field_name=field_name)
+            print(f"[DEBUG] Calling signers.sign_pdf with signer")
+            out_stream = signers.sign_pdf(w, signature_meta=meta, signer=signer)
+            print(f"[DEBUG] PDF signed successfully, writing to output")
             with open(output_pdf_path, 'wb') as doc_out:
-                meta = signers.PdfSignatureMetadata(field_name=field_name)
-                signers.sign_pdf(w, meta, signer=signer, out_file=doc_out)
+                doc_out.write(out_stream.read())
+        print(f"[DEBUG] PDF signing completed successfully")
         return True
     except Exception as e:
+        print(f"[ERROR] Error during PDF signing: {e}")
+        import traceback
+        traceback.print_exc()
         raise RuntimeError(f"Error signing PDF: {e}")

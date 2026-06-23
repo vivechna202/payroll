@@ -400,6 +400,46 @@ def download_merged(filename):
     )
 
 
+@form16_processing_bp.route("/signed/download/<path:filename>", methods=["GET"])
+@hr_required
+def download_signed(filename):
+    """
+    Download a single signed Form 16 PDF from the signed uploads folder.
+    If the signed version does not exist, fall back to the merged version.
+    Filename must belong to the current session's folder.
+    """
+    from config import FORM16_SIGNED_FOLDER, FORM16_MERGED_FOLDER
+
+    processing_session_id = session.get(SESSION_ID_KEY)
+    if not processing_session_id:
+        flash("No active session. Please process PDFs first.", "warning")
+        return redirect(url_for("form16_processing.dashboard"))
+
+    # Security: only serve files from this session's subfolders
+    safe_filename = os.path.basename(filename)
+    
+    # Try signed folder first
+    session_signed_out = os.path.join(FORM16_SIGNED_FOLDER, processing_session_id)
+    target = os.path.join(session_signed_out, safe_filename)
+    
+    # Fallback to merged folder if not signed yet
+    if not os.path.exists(target):
+        session_merged_out = os.path.join(FORM16_MERGED_FOLDER, processing_session_id)
+        target = os.path.join(session_merged_out, safe_filename)
+
+    if not os.path.exists(target):
+        flash(f"File '{safe_filename}' not found. It may have been cleared.", "danger")
+        return redirect(url_for("form16_processing.dashboard"))
+
+    return send_file(
+        target,
+        as_attachment=True,
+        download_name=safe_filename,
+        mimetype="application/pdf"
+    )
+
+
+
 @form16_processing_bp.route("/merge/download-all", methods=["GET"])
 @hr_required
 def download_all_merged():
@@ -594,7 +634,17 @@ def upload_certificate():
 @form16_processing_bp.route("/sign", methods=["POST"])
 @hr_required
 def sign_form16():
-    """Sign the document cryptographically using pyHanko."""
+    """
+    SIGNING-ONLY ROUTE: Thin controller layer for PDF signing.
+    
+    All cryptographic signing logic is handled exclusively in sign_service.sign_pdf().
+    This route only:
+    - Reads input PDF path and certificate password from request/session
+    - Calls sign_service.sign_pdf(input_pdf, output_pdf, password)
+    - Returns JSON response (success/failure)
+    
+    NO direct pyHanko usage, NO CA chain, NO trust validation.
+    """
     from services.sign_service import sign_pdf
     from config import FORM16_MERGED_FOLDER, FORM16_SIGNED_FOLDER
     
@@ -623,6 +673,7 @@ def sign_form16():
         if not os.path.exists(input_pdf):
             return jsonify({"status": "error", "message": f"Merged PDF not found for {filename}"}), 404
             
+        # Call sign_service.sign_pdf - ALL signing logic handled in service layer
         sign_pdf(input_pdf, output_pdf, password)
         return jsonify({"status": "success", "message": "Document signed successfully"})
         

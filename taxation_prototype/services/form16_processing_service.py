@@ -1046,9 +1046,14 @@ def zip_merged_files(session_id: str) -> dict:
     zip_path = os.path.join(session_out, zip_name)
 
     try:
+        from config import FORM16_SIGNED_FOLDER
+        session_signed_out = os.path.join(FORM16_SIGNED_FOLDER, session_id)
+        
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for r in successful:
-                zf.write(r["output_path"], arcname=r["output_filename"])
+                signed_path = os.path.join(session_signed_out, r["output_filename"])
+                file_to_write = signed_path if os.path.exists(signed_path) else r["output_path"]
+                zf.write(file_to_write, arcname=r["output_filename"])
         return {"success": True, "zip_path": zip_path, "count": len(successful), "error": None}
     except Exception as e:
         return {"success": False, "zip_path": None, "count": 0, "error": str(e)}
