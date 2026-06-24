@@ -130,6 +130,28 @@
   color: #a5b4fc;
   font-weight: 600;
 }
+.nav-link-parent {
+  border-radius: 0.75rem;
+}
+.nav-link-parent:hover {
+  background-color: var(--hover-bg);
+}
+.nav-link-child {
+  padding-left: 2.5rem;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  opacity: 0.95;
+}
+.nav-link-child:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+.nav-link-child.nav-link-active {
+  background-color: rgba(99, 102, 241, 0.12);
+}
+.nav-link-parent[aria-expanded="false"] #hr-portal-icon {
+  transform: rotate(-90deg);
+}
 
 /* ── Cards ─────────────────────────────────────────────── */
 .card {

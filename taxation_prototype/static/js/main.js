@@ -90,6 +90,37 @@ document.addEventListener('DOMContentLoaded', () => {
       link.classList.add('nav-link-active');
     }
   });
+  // ── Dropdown helper ───────────────────────────────────
+  const initPortalDropdown = (toggleId, childrenId, iconId) => {
+    const toggle = document.getElementById(toggleId);
+    const children = document.getElementById(childrenId);
+    const icon = document.getElementById(iconId);
+
+    if (!toggle || !children || !icon) return;
+
+    const setState = expanded => {
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      children.style.maxHeight = expanded ? `${children.scrollHeight}px` : '0';
+      icon.style.transform = expanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+    };
+
+    const activeChild = children.querySelector('.nav-link-active');
+    setState(activeChild !== null);
+
+    toggle.addEventListener('click', () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      setState(!expanded);
+    });
+
+    window.addEventListener('resize', () => {
+      if (toggle.getAttribute('aria-expanded') === 'true') {
+        children.style.maxHeight = `${children.scrollHeight}px`;
+      }
+    });
+  };
+
+  initPortalDropdown('hr-portal-toggle', 'hr-portal-children', 'hr-portal-icon');
+  initPortalDropdown('employee-portal-toggle', 'employee-portal-children', 'employee-portal-icon');
 
   // ── Form loading state ──────────────────────────────────
   document.querySelectorAll('form').forEach(form => {
