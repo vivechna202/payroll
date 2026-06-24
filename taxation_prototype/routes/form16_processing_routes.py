@@ -479,14 +479,20 @@ def approve_form16():
     """
     try:
         data = request.get_json()
+        print(f"[DEBUG] /approve - Received data: {data}")
+        
         if not data:
+            print(f"[DEBUG] /approve - No JSON data provided")
             return jsonify({"status": "error", "message": "No JSON data provided"}), 400
         
         filename = data.get("filename")
         pan = data.get("pan")
         employee_name = data.get("employee_name")
         
+        print(f"[DEBUG] /approve - filename: {filename}, pan: {pan}, employee_name: {employee_name}")
+        
         if not filename or not pan:
+            print(f"[DEBUG] /approve - Missing filename or pan")
             return jsonify({"status": "error", "message": "filename and pan are required"}), 400
         
         # Initialize approved records list in session if not exists
@@ -701,14 +707,20 @@ def publish_form16():
     """
     try:
         data = request.get_json()
+        print(f"[DEBUG] /publish - Received data: {data}")
+        
         if not data:
+            print(f"[DEBUG] /publish - No JSON data provided")
             return jsonify({"status": "error", "message": "No JSON data provided"}), 400
         
         filename = data.get("filename")
         pan = data.get("pan")
         employee_name = data.get("employee_name")
         
+        print(f"[DEBUG] /publish - filename: {filename}, pan: {pan}, employee_name: {employee_name}")
+        
         if not filename or not pan:
+            print(f"[DEBUG] /publish - Missing filename or pan")
             return jsonify({"status": "error", "message": "filename and pan are required"}), 400
             
         if SESSION_PUBLISHED_KEY not in session:
