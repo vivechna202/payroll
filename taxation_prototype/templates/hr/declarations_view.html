@@ -35,7 +35,7 @@
 <div class="card overflow-x-auto">
   <table class="w-full text-left border-collapse">
     <thead>
-      <tr class="border-b border-border">
+      <tr style="border-bottom: 1px solid var(--border-color);">
         <th class="th-cell">Declaration ID</th>
         <th class="th-cell">Employee ID</th>
         <th class="th-cell">FY</th>
@@ -44,10 +44,10 @@
         <th class="th-cell">Last Updated</th>
       </tr>
     </thead>
-    <tbody class="divide-y divide-border/50">
+    <tbody style="border-top: 1px solid var(--border-color);">
       {% for d in declarations %}
-      <tr class="hover:bg-slate-800/30 transition-colors">
-        <td class="td-cell font-medium text-slate-200">{{ d.declaration_id }}</td>
+      <tr class="transition-colors" style="border-bottom: 1px solid var(--border-color);" onmouseover="this.style.backgroundColor='var(--hover-bg)'" onmouseout="this.style.backgroundColor='transparent'">
+        <td class="td-cell font-medium" style="color: var(--text-primary);">{{ d.declaration_id }}</td>
         <td class="td-cell">{{ d.employee_id }}</td>
         <td class="td-cell">{{ d.financial_year }}</td>
         <td class="td-cell">{{ d.tax_regime }}</td>
@@ -60,11 +60,11 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="6" class="td-cell text-center py-8 text-slate-500">
+        <td colspan="6" class="td-cell text-center py-8" style="color: var(--text-muted);">
           No declarations found matching the current filters.
         </td>
       </tr>
-      {% endendfor %}
+      {% endfor %}
     </tbody>
   </table>
 </div>

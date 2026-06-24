@@ -8,8 +8,56 @@
 
 'use strict';
 
+// ── Theme Management ───────────────────────────────────────
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  const html = document.documentElement;
+  
+  if (savedTheme === 'light') {
+    html.setAttribute('data-theme', 'light');
+  } else {
+    html.setAttribute('data-theme', 'dark');
+  }
+  
+  updateThemeIcons(savedTheme);
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const currentTheme = html.getAttribute('data-theme') || 'dark';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateThemeIcons(newTheme);
+}
+
+function updateThemeIcons(theme) {
+  const sunIcon = document.getElementById('theme-icon-sun');
+  const moonIcon = document.getElementById('theme-icon-moon');
+  
+  if (sunIcon && moonIcon) {
+    if (theme === 'light') {
+      sunIcon.classList.remove('hidden');
+      moonIcon.classList.add('hidden');
+    } else {
+      sunIcon.classList.add('hidden');
+      moonIcon.classList.remove('hidden');
+    }
+  }
+}
+
 // ── Auto-dismiss flash messages ────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  
+  // Initialize theme
+  initTheme();
+  
+  // Theme toggle button
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
 
   // Dismiss flash alerts after 5 seconds
   const flashes = document.querySelectorAll('[class*="bg-emerald-9"], [class*="bg-red-9"], [class*="bg-amber-9"], [class*="bg-brand-9"]');

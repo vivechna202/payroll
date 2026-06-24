@@ -46,7 +46,7 @@
   {% block head_extra %}{% endblock %}
 </head>
 
-<body class="h-full font-sans bg-surface text-slate-100 antialiased">
+<body class="h-full font-sans antialiased" style="background-color: var(--bg-surface); color: var(--text-primary);">
 
 {% if session.user %}
 <!-- ══════════════════════════════════════════════════
@@ -56,10 +56,11 @@
 
   <!-- ── Sidebar ────────────────────────────────── -->
   <aside id="sidebar"
-         class="w-64 flex-shrink-0 bg-card border-r border-border flex flex-col transition-all duration-300">
+         class="w-64 flex-shrink-0 flex flex-col transition-all duration-300"
+         style="background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color);">
 
     <!-- Logo -->
-    <div class="px-6 py-5 border-b border-border flex items-center gap-3">
+    <div class="px-6 py-5 flex items-center gap-3" style="border-bottom: 1px solid var(--border-color);">
       <div class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg">
         <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round"
@@ -67,22 +68,31 @@
         </svg>
       </div>
       <div>
-        <p class="text-sm font-bold text-white leading-tight">TaxPro</p>
-        <p class="text-[10px] text-slate-400 uppercase tracking-widest">HRMS · FY {{ fy if fy else '2024-25' }}</p>
+        <p class="text-sm font-bold leading-tight" style="color: var(--text-primary);">TaxPro</p>
+        <p class="text-[10px] uppercase tracking-widest" style="color: var(--text-muted);">HRMS · FY {{ fy if fy else '2024-25' }}</p>
       </div>
     </div>
 
     <!-- Role Badge -->
-    <div class="px-4 py-3 border-b border-border">
-      <div class="flex items-center gap-2 px-3 py-2 rounded-lg
-                  {% if session.user.role == 'hr' %}bg-emerald-900/40 border border-emerald-700/50
-                  {% else %}bg-brand-900/40 border border-brand-700/50{% endif %}">
-        <span class="w-2 h-2 rounded-full
-                     {% if session.user.role == 'hr' %}bg-emerald-400{% else %}bg-brand-400{% endif %}
-                     animate-pulse"></span>
-        <span class="text-xs font-semibold
-                     {% if session.user.role == 'hr' %}text-emerald-300{% else %}text-brand-300{% endif %}
-                     uppercase tracking-wider">
+    <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-color);">
+      <div class="flex items-center gap-2 px-3 py-2 rounded-lg"
+           {% if session.user.role == 'hr' %}
+           style="background-color: var(--alert-success-bg); border: 1px solid var(--alert-success-border);"
+           {% else %}
+           style="background-color: var(--alert-info-bg); border: 1px solid var(--alert-info-border);"
+           {% endif %}>
+        <span class="w-2 h-2 rounded-full animate-pulse"
+             {% if session.user.role == 'hr' %}
+             style="background-color: var(--alert-success-text);"
+             {% else %}
+             style="background-color: var(--alert-info-text);"
+             {% endif %}></span>
+        <span class="text-xs font-semibold uppercase tracking-wider"
+             {% if session.user.role == 'hr' %}
+             style="color: var(--alert-success-text);"
+             {% else %}
+             style="color: var(--alert-info-text);"
+             {% endif %}>
           {{ session.user.role }} Portal
         </span>
       </div>
@@ -101,9 +111,10 @@
         Dashboard
       </a>
 
+      {% if session.user.role == 'employee' %}
       <!-- Employee Portal -->
       <div class="pt-3 pb-1">
-        <p class="px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Employee Portal</p>
+        <p class="px-3 text-[10px] font-semibold uppercase tracking-widest" style="color: var(--text-muted);">Employee Portal</p>
       </div>
 
       <a href="{{ url_for('employee.tax_dashboard') }}"
@@ -141,11 +152,12 @@
         </svg>
         Form 16 Download
       </a>
+      {% endif %}
 
       {% if session.user.role == 'hr' %}
       <!-- HR Portal -->
       <div class="pt-3 pb-1">
-        <p class="px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">HR Portal</p>
+        <p class="px-3 text-[10px] font-semibold uppercase tracking-widest" style="color: var(--text-muted);">HR Portal</p>
       </div>
 
       <a href="{{ url_for('hr.payroll_processing') }}"
@@ -241,22 +253,26 @@
     </nav>
 
     <!-- User Card + Role Switch -->
-    <div class="border-t border-border px-4 py-4 space-y-3">
+    <div class="px-4 py-4 space-y-3" style="border-top: 1px solid var(--border-color);">
 
       <!-- Role Switch -->
       <form method="POST" action="{{ url_for('auth.switch_role') }}" class="flex gap-2">
         {% if session.user.role == 'hr' %}
           <input type="hidden" name="role" value="employee" />
           <button type="submit"
-                  class="flex-1 text-xs py-1.5 rounded-lg border border-brand-600 text-brand-300
-                         hover:bg-brand-600/20 transition-colors duration-200 font-medium">
+                  class="flex-1 text-xs py-1.5 rounded-lg font-medium transition-colors duration-200"
+                  style="border: 1px solid var(--alert-info-border); color: var(--alert-info-text);"
+                  onmouseover="this.style.backgroundColor='var(--alert-info-bg)'"
+                  onmouseout="this.style.backgroundColor='transparent'">
             Switch to Employee
           </button>
         {% else %}
           <input type="hidden" name="role" value="hr" />
           <button type="submit"
-                  class="flex-1 text-xs py-1.5 rounded-lg border border-emerald-600 text-emerald-300
-                         hover:bg-emerald-600/20 transition-colors duration-200 font-medium">
+                  class="flex-1 text-xs py-1.5 rounded-lg font-medium transition-colors duration-200"
+                  style="border: 1px solid var(--alert-success-border); color: var(--alert-success-text);"
+                  onmouseover="this.style.backgroundColor='var(--alert-success-bg)'"
+                  onmouseout="this.style.backgroundColor='transparent'">
             Switch to HR View
           </button>
         {% endif %}
@@ -269,12 +285,15 @@
           {{ session.user.name[0] }}
         </div>
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium text-white truncate">{{ session.user.name }}</p>
-          <p class="text-xs text-slate-400 truncate">{{ session.user.employee_id }}</p>
+          <p class="text-sm font-medium truncate" style="color: var(--text-primary);">{{ session.user.name }}</p>
+          <p class="text-xs truncate" style="color: var(--text-muted);">{{ session.user.employee_id }}</p>
         </div>
         <a href="{{ url_for('auth.logout') }}"
            title="Logout"
-           class="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+           class="p-1.5 rounded-lg transition-colors"
+           style="color: var(--text-secondary);"
+           onmouseover="this.style.color='#f87171'; this.style.backgroundColor='rgba(127,29,29,0.2)'"
+           onmouseout="this.style.color='var(--text-secondary)'; this.style.backgroundColor='transparent'">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
@@ -288,12 +307,27 @@
   <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
     <!-- Top bar -->
-    <header class="h-14 flex items-center justify-between px-6 border-b border-border bg-card/50 backdrop-blur-sm">
+    <header class="h-14 flex items-center justify-between px-6 backdrop-blur-sm"
+            style="border-bottom: 1px solid var(--border-color); background-color: var(--header-bg);">
       <div>
-        <h1 class="text-sm font-semibold text-white">{% block page_title %}Dashboard{% endblock %}</h1>
-        <p class="text-xs text-slate-400">{% block page_subtitle %}Financial Year {{ fy if fy else '2024-25' }}{% endblock %}</p>
+        <h1 class="text-sm font-semibold" style="color: var(--text-primary);">{% block page_title %}Dashboard{% endblock %}</h1>
+        <p class="text-xs" style="color: var(--text-muted);">{% block page_subtitle %}Financial Year {{ fy if fy else '2024-25' }}{% endblock %}</p>
       </div>
       <div class="flex items-center gap-3">
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle" 
+                class="p-2 rounded-lg transition-colors"
+                style="color: var(--text-secondary); border: 1px solid var(--border-color);"
+                title="Toggle Light/Dark Mode"
+                onmouseover="this.style.borderColor='var(--text-muted)'; this.style.backgroundColor='var(--hover-bg)'"
+                onmouseout="this.style.borderColor='var(--border-color)'; this.style.backgroundColor='transparent'">
+          <svg id="theme-icon-sun" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+          <svg id="theme-icon-moon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
         <!-- Flash indicator -->
         <div id="flash-area" class="hidden"></div>
       </div>
@@ -304,11 +338,16 @@
       {% if messages %}
         <div class="px-6 pt-4 space-y-2">
           {% for category, message in messages %}
-            <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
-                        {% if category == 'success' %}bg-emerald-900/40 text-emerald-300 border border-emerald-700/50
-                        {% elif category == 'danger' %}bg-red-900/40 text-red-300 border border-red-700/50
-                        {% elif category == 'warning' %}bg-amber-900/40 text-amber-300 border border-amber-700/50
-                        {% else %}bg-brand-900/40 text-brand-300 border border-brand-700/50{% endif %}">
+            <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium"
+                        {% if category == 'success' %}
+                        style="background-color: var(--alert-success-bg); color: var(--alert-success-text); border: 1px solid var(--alert-success-border);"
+                        {% elif category == 'danger' %}
+                        style="background-color: var(--alert-danger-bg); color: var(--alert-danger-text); border: 1px solid var(--alert-danger-border);"
+                        {% elif category == 'warning' %}
+                        style="background-color: var(--alert-warning-bg); color: var(--alert-warning-text); border: 1px solid var(--alert-warning-border);"
+                        {% else %}
+                        style="background-color: var(--alert-info-bg); color: var(--alert-info-text); border: 1px solid var(--alert-info-border);"
+                        {% endif %}>
               <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round"
                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
