@@ -150,9 +150,191 @@ def calculate_taxable_income(annual_income: float, regime: str, deductions: dict
     return taxable_income
 
 
+def get_fy_month_number(calendar_month: int) -> int:
+    """
+    Convert calendar month (1-12) to financial year month (1-12).
+    FY 2024-25 runs from April (calendar month 4) to March (calendar month 3).
+    
+    Args:
+        calendar_month: Calendar month (1=Jan, 4=Apr, etc.)
+    
+    Returns:
+        FY month (1=Apr, 12=Mar)
+    """
+    # April = FY month 1, May = month 2, ..., March = month 12
+    if calendar_month >= 4:  # Apr onwards in same calendar year
+        return calendar_month - 3
+    else:  # Jan, Feb, Mar belong to next FY
+        return calendar_month + 9
+
+
+def get_remaining_months_in_fy(current_month: int) -> int:
+    """
+    Calculate remaining months in financial year.
+    
+    Args:
+        current_month: Calendar month (1-12)
+    
+    Returns:
+        Number of remaining months including current month
+    """
+    fy_month = get_fy_month_number(current_month)
+    return 12 - fy_month + 1
+
+
+def get_actual_income_till_date(employee_id: str, fy: str, current_month: int) -> float:
+    """
+    Sum actual gross salary earned in the current FY up to and including current month.
+    
+    Args:
+        employee_id: Employee ID
+        fy: Financial year (e.g., "2024-25")
+        current_month: Current calendar month
+    
+    Returns:
+        Sum of gross salaries for processed payroll records
+    """
+    payroll_df = read_csv_filtered(CSV_PAYROLL, "employee_id", employee_id)
+    if payroll_df.empty or "financial_year" not in payroll_df.columns:
+        return 0.0
+    
+    # Filter for current FY
+    payroll_df = payroll_df[payroll_df["financial_year"] == fy]
+    if payroll_df.empty:
+        return 0.0
+    
+    # Only include months that have been processed (month <= current_month OR wrap-around logic)
+    # This is tricky with calendar months, so we filter based on what's in the CSV
+    # Assume if it's in payroll CSV for this FY, it's processed
+    actual_income = 0.0
+    if "gross_salary" in payroll_df.columns:
+        actual_income = pd.to_numeric(payroll_df["gross_salary"], errors="coerce").sum()
+    
+    return round(actual_income, 2)
+
+
+def get_latest_monthly_salary(employee_id: str, fy: str, current_month: int) -> float:
+    """
+    Get the latest processed monthly salary for the employee.
+    Used to project future income for remaining months.
+    
+    Args:
+        employee_id: Employee ID
+        fy: Financial year
+        current_month: Current calendar month
+    
+    Returns:
+        Latest monthly gross salary (or 0 if no payroll data)
+    """
+    payroll_df = read_csv_filtered(CSV_PAYROLL, "employee_id", employee_id)
+    if payroll_df.empty or "financial_year" not in payroll_df.columns:
+        return 0.0
+    
+    # Filter for current FY
+    payroll_df = payroll_df[payroll_df["financial_year"] == fy]
+    if payroll_df.empty:
+        return 0.0
+    
+    # Get the most recent record
+    if "gross_salary" in payroll_df.columns:
+        latest_gross = float(payroll_df.iloc[-1]["gross_salary"])
+        return round(latest_gross, 2)
+    
+    return 0.0
+
+
+def get_bonus_incentives(employee_id: str, fy: str) -> float:
+    """
+    Get known bonuses and incentives for the employee.
+    This is a placeholder - can be extended to read from a dedicated bonus table.
+    
+    Args:
+        employee_id: Employee ID
+        fy: Financial year
+    
+    Returns:
+        Total bonus/incentive amount (0 for now)
+    """
+    # TODO: Implement when bonus table is added
+    return 0.0
+
+
+def calculate_projected_annual_income(employee_id: str, fy: str, current_month: int) -> dict:
+    """
+    Calculate projected annual income based on:
+    1. Actual income earned till date (from payroll history)
+    2. Projected future income (latest salary × remaining months)
+    3. Bonuses/incentives
+    
+    Args:
+        employee_id: Employee ID
+        fy: Financial year (e.g., "2024-25")
+        current_month: Current calendar month (1-12)
+    
+    Returns:
+        Dictionary with breakdown of projection:
+        {
+            "actual_income_till_date": float,
+            "latest_monthly_salary": float,
+            "remaining_months": int,
+            "projected_future_income": float,
+            "bonus_income": float,
+            "projected_annual_income": float
+        }
+    """
+    actual_income = get_actual_income_till_date(employee_id, fy, current_month)
+    latest_monthly = get_latest_monthly_salary(employee_id, fy, current_month)
+    remaining_months = get_remaining_months_in_fy(current_month)
+    bonus_income = get_bonus_incentives(employee_id, fy)
+    
+    # Projected future income = latest monthly salary × remaining months
+    projected_future = latest_monthly * remaining_months
+    
+    # Total projected annual income
+    projected_annual = actual_income + projected_future + bonus_income
+    
+    return {
+        "actual_income_till_date": round(actual_income, 2),
+        "latest_monthly_salary": round(latest_monthly, 2),
+        "remaining_months": remaining_months,
+        "projected_future_income": round(projected_future, 2),
+        "bonus_income": round(bonus_income, 2),
+        "projected_annual_income": round(projected_annual, 2)
+    }
+
+
+def get_tds_deducted_till_date(employee_id: str, fy: str, current_month: int) -> float:
+    """
+    Get total TDS deducted in the current FY up to and including current month.
+    
+    Args:
+        employee_id: Employee ID
+        fy: Financial year
+        current_month: Current calendar month
+    
+    Returns:
+        Sum of TDS deducted till date
+    """
+    payroll_df = read_csv_filtered(CSV_PAYROLL, "employee_id", employee_id)
+    if payroll_df.empty or "financial_year" not in payroll_df.columns:
+        return 0.0
+    
+    # Filter for current FY
+    payroll_df = payroll_df[payroll_df["financial_year"] == fy]
+    if payroll_df.empty:
+        return 0.0
+    
+    tds_deducted = 0.0
+    if "tds" in payroll_df.columns:
+        tds_deducted = pd.to_numeric(payroll_df["tds"], errors="coerce").sum()
+    
+    return round(tds_deducted, 2)
+
+
 def calculate_tds(monthly_gross: float, regime: str, employee_deductions: dict) -> float:
     """
     Calculate monthly TDS based on gross salary, tax regime, and deductions.
+    LEGACY: Use calculate_tds_with_projection() for new implementations.
     
     Args:
         monthly_gross: Monthly gross salary
@@ -199,6 +381,105 @@ def calculate_tds(monthly_gross: float, regime: str, employee_deductions: dict) 
     monthly_tds = tax_with_cess / 12.0
     
     return round(monthly_tds, 2)
+
+
+def calculate_tds_with_projection(employee_id: str, month: int, fy: str, regime: str, 
+                                   employee_deductions: dict) -> dict:
+    """
+    Calculate monthly TDS using dynamic annual income projection.
+    
+    Process:
+    1. Calculate projected annual income from payroll history
+    2. Apply deductions to get taxable income
+    3. Calculate total tax liability
+    4. Subtract TDS already deducted
+    5. Divide remaining tax by remaining months
+    
+    Args:
+        employee_id: Employee ID
+        month: Current calendar month (1-12)
+        fy: Financial year (e.g., "2024-25")
+        regime: Tax regime ("OLD" or "NEW")
+        employee_deductions: Dictionary with deduction amounts
+    
+    Returns:
+        Dictionary with detailed TDS calculation:
+        {
+            "employee_id": str,
+            "month": int,
+            "fy": str,
+            "regime": str,
+            "projected_annual_income": float,
+            "actual_income_till_date": float,
+            "projected_future_income": float,
+            "bonus_income": float,
+            "annual_taxable_income": float,
+            "estimated_annual_tax": float,
+            "tds_deducted_till_date": float,
+            "remaining_tax": float,
+            "remaining_months": int,
+            "monthly_tds": float,
+            "projection_details": dict
+        }
+    """
+    regime = regime.upper() if regime else "NEW"
+    
+    # Step 1: Calculate projected annual income
+    projection = calculate_projected_annual_income(employee_id, fy, month)
+    projected_annual = projection["projected_annual_income"]
+    
+    # Step 2: Calculate PF contribution for deductions (from latest salary)
+    basic_salary = float(employee_deductions.get("basic_salary", 0))
+    pf_contribution = basic_salary * (PF_PERCENTAGE / 100.0) * 12  # Annual PF
+    
+    # Step 3: Prepare deductions dictionary
+    deductions = {
+        "section_80C": employee_deductions.get("section_80C", 0),
+        "section_80D": employee_deductions.get("section_80D", 0),
+        "hra_exemption": employee_deductions.get("hra_exemption", 0),
+        "pf_contribution": pf_contribution
+    }
+    
+    # Step 4: Calculate taxable income
+    taxable_income = calculate_taxable_income(projected_annual, regime, deductions)
+    
+    # Step 5: Calculate total annual tax
+    if regime == "OLD":
+        tax = apply_old_regime_slabs(taxable_income)
+    else:
+        tax = apply_new_regime_slabs(taxable_income)
+    
+    tax_with_cess = tax + apply_cess(tax)
+    
+    # Step 6: Get TDS already deducted
+    tds_deducted_till_date = get_tds_deducted_till_date(employee_id, fy, month)
+    
+    # Step 7: Calculate remaining tax
+    remaining_tax = max(0, tax_with_cess - tds_deducted_till_date)
+    
+    # Step 8: Calculate remaining months
+    remaining_months = get_remaining_months_in_fy(month)
+    
+    # Step 9: Calculate monthly TDS
+    monthly_tds = remaining_tax / remaining_months if remaining_months > 0 else 0.0
+    
+    return {
+        "employee_id": employee_id,
+        "month": month,
+        "fy": fy,
+        "regime": regime,
+        "projected_annual_income": round(projected_annual, 2),
+        "actual_income_till_date": projection["actual_income_till_date"],
+        "projected_future_income": projection["projected_future_income"],
+        "bonus_income": projection["bonus_income"],
+        "annual_taxable_income": round(taxable_income, 2),
+        "estimated_annual_tax": round(tax_with_cess, 2),
+        "tds_deducted_till_date": round(tds_deducted_till_date, 2),
+        "remaining_tax": round(remaining_tax, 2),
+        "remaining_months": remaining_months,
+        "monthly_tds": round(monthly_tds, 2),
+        "projection_details": projection
+    }
 
 
 # Legacy functions for backward compatibility
@@ -349,7 +630,16 @@ def get_tax_regime_comparison(employee_id: str, fy: str = CURRENT_FY) -> dict:
 def compute_tds_for_month(month: str, fy: str) -> dict:
     """
     Compute TDS for all active employees for a given month and FY.
-    Stores results in CSV_TDS and returns a status summary.
+    Uses dynamic annual projection based on payroll history.
+    
+    Process:
+    1. For each employee, calculate projected annual income from payroll history
+    2. Calculate tax on projected income
+    3. Subtract TDS already deducted
+    4. Divide remaining tax by remaining months
+    5. Store results in CSV_TDS
+    
+    Returns status summary with computed/skipped counts.
     """
     from services.payroll_service import get_employee_salary
     
@@ -358,6 +648,7 @@ def compute_tds_for_month(month: str, fy: str) -> dict:
         return {"status": "error", "message": "No employees found."}
     
     tds_df = read_csv(CSV_TDS)
+    month_int = int(month)
     computed = 0
     skipped = 0
     
@@ -367,7 +658,7 @@ def compute_tds_for_month(month: str, fy: str) -> dict:
         
         emp_id = emp["employee_id"]
         
-        # Check if already computed
+        # Check if already computed for this month
         if not tds_df.empty and "employee_id" in tds_df.columns:
             mask = (tds_df["employee_id"] == emp_id) & (tds_df["month"] == str(month)) & (tds_df["financial_year"] == fy)
             if mask.any():
@@ -379,15 +670,9 @@ def compute_tds_for_month(month: str, fy: str) -> dict:
             continue
         
         basic = float(salary_data.get("basic_salary", 0))
-        hra = float(salary_data.get("hra", 0))
-        special = float(salary_data.get("special_allowance", 0))
-        other = float(salary_data.get("other_allowances", 0))
         regime = salary_data.get("tds_regime", "NEW")
         if not regime or regime.strip() == "":
             regime = "NEW"
-        
-        monthly_gross = basic + hra + special + other
-        annual_gross = monthly_gross * 12
         
         employee_deductions = {
             "basic_salary": basic,
@@ -396,24 +681,8 @@ def compute_tds_for_month(month: str, fy: str) -> dict:
             "hra_exemption": float(salary_data.get("hra_exemption", 0))
         }
         
-        # Calculate TDS
-        monthly_tds = calculate_tds(monthly_gross, regime, employee_deductions)
-        
-        # Calculate taxable income for records
-        pf_contribution = basic * (PF_PERCENTAGE / 100.0) * 12
-        deductions = {
-            "section_80C": employee_deductions.get("section_80C", 0),
-            "section_80D": employee_deductions.get("section_80D", 0),
-            "hra_exemption": employee_deductions.get("hra_exemption", 0),
-            "pf_contribution": pf_contribution
-        }
-        taxable_income = calculate_taxable_income(annual_gross, regime, deductions)
-        
-        if regime.upper() == "OLD":
-            annual_tax = apply_old_regime_slabs(taxable_income)
-        else:
-            annual_tax = apply_new_regime_slabs(taxable_income)
-        annual_tax_with_cess = annual_tax + apply_cess(annual_tax)
+        # Calculate TDS using projection model
+        tds_result = calculate_tds_with_projection(emp_id, month_int, fy, regime, employee_deductions)
         
         tds_row = {
             "tds_id": f"TDS-{str(uuid.uuid4())[:8].upper()}",
@@ -421,10 +690,10 @@ def compute_tds_for_month(month: str, fy: str) -> dict:
             "financial_year": fy,
             "month": str(month),
             "tax_regime": regime.upper(),
-            "annual_taxable_income": f"{taxable_income:.2f}",
-            "estimated_annual_tax": f"{annual_tax_with_cess:.2f}",
-            "annual_tds": f"{annual_tax_with_cess:.2f}",
-            "monthly_tds": f"{monthly_tds:.2f}",
+            "annual_taxable_income": f"{tds_result['annual_taxable_income']:.2f}",
+            "estimated_annual_tax": f"{tds_result['estimated_annual_tax']:.2f}",
+            "annual_tds": f"{tds_result['estimated_annual_tax']:.2f}",
+            "monthly_tds": f"{tds_result['monthly_tds']:.2f}",
             "payroll_id": "",
             "calculated_at": datetime.now().isoformat()
         }
@@ -433,7 +702,7 @@ def compute_tds_for_month(month: str, fy: str) -> dict:
     
     return {
         "status": "success",
-        "message": f"TDS computed for {computed} employees. Skipped {skipped} (already computed)."
+        "message": f"TDS computed for {computed} employees (using dynamic projection). Skipped {skipped} (already computed)."
     }
 
 

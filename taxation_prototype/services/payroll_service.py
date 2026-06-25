@@ -9,7 +9,7 @@ import uuid
 import pandas as pd
 from config import CSV_PAYROLL, CSV_EMPLOYEES, CSV_EMPLOYEE_SALARY, PF_PERCENTAGE, PROFESSIONAL_TAX
 from services.csv_service import read_csv, read_csv_filtered, csv_to_records, append_row, update_row, write_csv
-from services.tax_service import calculate_tds
+from services.tax_service import calculate_tds_with_projection
 
 def get_employee_salary(employee_id: str) -> dict:
     """Return the current salary breakdown for an employee."""
@@ -103,7 +103,7 @@ def process_monthly_payroll(month: str, fy: str) -> dict:
     This function:
     - Fetches employee salary data including TDS regime
     - Reads tds_regime from CSV (defaults to NEW if missing)
-    - Calls calculate_tds() from tax_service
+    - Calls calculate_tds_with_projection() from tax_service (dynamic annual projection model)
     - Updates payroll calculation to include TDS
     - Adds tds field in payroll CSV row
     
@@ -111,7 +111,7 @@ def process_monthly_payroll(month: str, fy: str) -> dict:
         gross = basic + hra + special + other
         pf = basic * PF_PERCENTAGE
         pt = PROFESSIONAL_TAX
-        tds = calculate_tds(gross, regime, employee_data)
+        tds = calculate_tds_with_projection(...) - uses payroll history to project annual income
         net = gross - pf - pt - tds
     """
     emps = csv_to_records(CSV_EMPLOYEES)
@@ -122,6 +122,7 @@ def process_monthly_payroll(month: str, fy: str) -> dict:
     
     processed_count = 0
     skipped_count = 0
+    month_int = int(month)
     
     for e in emps:
         if e.get("status") != "ACTIVE":
@@ -163,8 +164,9 @@ def process_monthly_payroll(month: str, fy: str) -> dict:
             "hra_exemption": float(sal.get("hra_exemption", 0))
         }
         
-        # Calculate TDS using tax_service
-        tds = calculate_tds(gross, regime, employee_deductions)
+        # Calculate TDS using projection model (NEW: dynamic annual income projection)
+        tds_result = calculate_tds_with_projection(emp_id, month_int, fy, regime, employee_deductions)
+        tds = tds_result["monthly_tds"]
         
         # Calculate net salary with TDS deduction
         net = gross - pf - pt - tds
@@ -195,7 +197,7 @@ def process_monthly_payroll(month: str, fy: str) -> dict:
 
     return {
         "status": "success",
-        "message": f"Processed {processed_count} employees. Skipped {skipped_count} (already processed).",
+        "message": f"Processed {processed_count} employees (using dynamic TDS projection). Skipped {skipped_count} (already processed).",
         "month": month,
         "fy": fy,
     }
