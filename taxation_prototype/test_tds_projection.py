@@ -13,7 +13,10 @@ from services.tax_service import (
     get_fy_month_number,
     get_remaining_months_in_fy,
     get_actual_income_till_date,
-    get_latest_monthly_salary
+    get_actual_annual_income,
+    get_total_tds_deducted,
+    get_latest_monthly_salary,
+    year_end_reconciliation
 )
 from config import CURRENT_FY
 import json
@@ -98,6 +101,31 @@ def test_tds_calculation():
             print(f"    {key}: {val}")
 
 
+def test_year_end_reconciliation():
+    """Test year-end reconciliation using actual payroll and TDS data."""
+    print("\n=== Testing Year-End Reconciliation ===")
+
+    employee_id = "EMP001"
+    fy = CURRENT_FY
+    regime = "NEW"
+    employee_deductions = {
+        "section_80C": 50000,
+        "section_80D": 25000,
+        "hra_exemption": 15000,
+        "pf_contribution": 60000
+    }
+
+    result = year_end_reconciliation(employee_id, fy, regime, employee_deductions)
+
+    print(f"\n  Employee: {employee_id}, FY: {fy}, Regime: {regime}")
+    print(f"  Actual Annual Income: ₹{result['actual_annual_income']:,.2f}")
+    print(f"  Annual Taxable Income: ₹{result['annual_taxable_income']:,.2f}")
+    print(f"  Final Tax Liability: ₹{result['final_tax']:,.2f}")
+    print(f"  Total TDS Deducted: ₹{result['total_tds_deducted']:,.2f}")
+    print(f"  Adjustment Amount: ₹{result['adjustment_amount']:,.2f}")
+    print(f"  Status: {result['status']}")
+
+
 def test_comparison_old_vs_new():
     """Compare old annualization vs new projection model."""
     print("\n=== Comparing Old vs New TDS Model ===")
@@ -158,6 +186,7 @@ if __name__ == "__main__":
         test_fy_helpers()
         test_projection()
         test_tds_calculation()
+        test_year_end_reconciliation()
         test_comparison_old_vs_new()
         
         print("\n" + "="*60)

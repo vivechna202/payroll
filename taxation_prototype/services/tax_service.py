@@ -213,6 +213,101 @@ def get_actual_income_till_date(employee_id: str, fy: str, current_month: int) -
     return round(actual_income, 2)
 
 
+def get_actual_annual_income(employee_id: str, fy: str) -> float:
+    """
+    Sum actual gross salary earned for the full financial year.
+
+    Args:
+        employee_id: Employee ID
+        fy: Financial year (e.g., "2024-25")
+
+    Returns:
+        Total gross_salary for all payroll records in the FY.
+    """
+    payroll_df = read_csv_filtered(CSV_PAYROLL, "employee_id", employee_id)
+    if payroll_df.empty or "financial_year" not in payroll_df.columns:
+        return 0.0
+
+    payroll_df = payroll_df[payroll_df["financial_year"] == fy]
+    if payroll_df.empty:
+        return 0.0
+
+    annual_income = 0.0
+    if "gross_salary" in payroll_df.columns:
+        annual_income = pd.to_numeric(payroll_df["gross_salary"], errors="coerce").sum()
+
+    return round(annual_income, 2)
+
+
+def get_total_tds_deducted(employee_id: str, fy: str) -> float:
+    """
+    Get total TDS already deducted for a full financial year.
+
+    Prefers payroll deductions in CSV_PAYROLL, falls back to monthly TDS records in CSV_TDS.
+    """
+    payroll_df = read_csv_filtered(CSV_PAYROLL, "employee_id", employee_id)
+    if not payroll_df.empty and "financial_year" in payroll_df.columns:
+        payroll_df = payroll_df[payroll_df["financial_year"] == fy]
+        if not payroll_df.empty and "tds" in payroll_df.columns:
+            return round(pd.to_numeric(payroll_df["tds"], errors="coerce").sum(), 2)
+
+    # Fallback to TDS records if payroll CSV does not contain TDS column
+    tds_df = read_csv_filtered(CSV_TDS, "employee_id", employee_id)
+    if tds_df.empty or "financial_year" not in tds_df.columns:
+        return 0.0
+
+    tds_df = tds_df[tds_df["financial_year"] == fy]
+    if tds_df.empty or "monthly_tds" not in tds_df.columns:
+        return 0.0
+
+    return round(pd.to_numeric(tds_df["monthly_tds"], errors="coerce").sum(), 2)
+
+
+def year_end_reconciliation(employee_id: str, fy: str, regime: str, employee_deductions: dict) -> dict:
+    """
+    Perform year-end reconciliation using actual payroll data only.
+
+    Args:
+        employee_id: Employee ID
+        fy: Financial year (e.g., "2024-25")
+        regime: Tax regime "OLD" or "NEW"
+        employee_deductions: Deductions dict passed through calculate_taxable_income()
+
+    Returns:
+        Structured reconciliation result with final tax liability,
+        actual TDS deducted, adjustment amount, and settlement status.
+    """
+    regime = regime.upper() if regime else "NEW"
+    actual_income = get_actual_annual_income(employee_id, fy)
+    taxable_income = calculate_taxable_income(actual_income, regime, employee_deductions)
+
+    if regime == "OLD":
+        tax = apply_old_regime_slabs(taxable_income)
+    else:
+        tax = apply_new_regime_slabs(taxable_income)
+
+    final_tax = round(tax + apply_cess(tax), 2)
+    total_tds_deducted = get_total_tds_deducted(employee_id, fy)
+    adjustment_amount = round(final_tax - total_tds_deducted, 2)
+
+    if abs(adjustment_amount) < 0.01:
+        status = "SETTLED"
+        adjustment_amount = 0.0
+    elif adjustment_amount > 0:
+        status = "PAY_MORE"
+    else:
+        status = "REFUND"
+
+    return {
+        "final_tax": final_tax,
+        "total_tds_deducted": total_tds_deducted,
+        "adjustment_amount": adjustment_amount,
+        "status": status,
+        "actual_annual_income": round(actual_income, 2),
+        "annual_taxable_income": round(taxable_income, 2)
+    }
+
+
 def get_latest_monthly_salary(employee_id: str, fy: str, current_month: int) -> float:
     """
     Get the latest processed monthly salary for the employee.
