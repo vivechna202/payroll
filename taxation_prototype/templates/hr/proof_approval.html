@@ -98,6 +98,8 @@
       <div class="text-right">
         <p class="text-xs text-slate-500">Reviewed At</p>
         <p class="text-sm text-slate-300">{{ proof.reviewed_at[:10] if proof.reviewed_at else '–' }}</p>
+        <p class="text-xs text-slate-500 mt-2">Reviewed By</p>
+        <p class="text-sm text-slate-300">{{ proof.reviewed_by or '–' }}</p>
       </div>
       {% endif %}
 

@@ -80,6 +80,8 @@ def submit_proof(employee_id: str, declaration_id: str, section: str, file_obj) 
             df.at[idx, "hr_remarks"] = ""
             df.at[idx, "uploaded_at"] = now
             df.at[idx, "reviewed_at"] = ""
+            if "reviewed_by" in df.columns:
+                df.at[idx, "reviewed_by"] = ""
             write_csv(CSV_PROOFS, df)
             return df.iloc[idx].to_dict()
 
@@ -95,24 +97,29 @@ def submit_proof(employee_id: str, declaration_id: str, section: str, file_obj) 
         "hr_remarks": "",
         "uploaded_at": now,
         "reviewed_at": "",
+        "reviewed_by": "",
     }
     append_row(CSV_PROOFS, row)
     return row
 
 
-def approve_proof(proof_id: str, remarks: str = "") -> bool:
-    """Mark a proof as APPROVED."""
-    return update_row(CSV_PROOFS, "proof_id", proof_id, {
+def approve_proof(proof_id: str, reviewer_name: str, remarks: str = "") -> bool:
+    """Mark a proof as APPROVED and store reviewer metadata."""
+    updates = {
         "status": "APPROVED",
         "hr_remarks": remarks,
         "reviewed_at": datetime.now().isoformat(),
-    })
+        "reviewed_by": reviewer_name,
+    }
+    return update_row(CSV_PROOFS, "proof_id", proof_id, updates)
 
 
-def reject_proof(proof_id: str, remarks: str = "") -> bool:
-    """Mark a proof as REJECTED."""
-    return update_row(CSV_PROOFS, "proof_id", proof_id, {
+def reject_proof(proof_id: str, reviewer_name: str, remarks: str = "") -> bool:
+    """Mark a proof as REJECTED and store reviewer metadata."""
+    updates = {
         "status": "REJECTED",
         "hr_remarks": remarks,
         "reviewed_at": datetime.now().isoformat(),
-    })
+        "reviewed_by": reviewer_name,
+    }
+    return update_row(CSV_PROOFS, "proof_id", proof_id, updates)

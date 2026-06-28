@@ -61,7 +61,7 @@ ensure_csv(CSV_DECLARATION_ITEMS, [
 ensure_csv(CSV_PROOFS, [
     "proof_id", "employee_id", "declaration_id", "section",
     "file_name", "file_path", "status", "hr_remarks",
-    "uploaded_at", "reviewed_at"
+    "uploaded_at", "reviewed_at", "reviewed_by"
 ])
 
 ensure_csv(CSV_PAYROLL, [

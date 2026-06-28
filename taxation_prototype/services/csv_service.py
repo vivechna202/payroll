@@ -101,10 +101,23 @@ def csv_to_records(filepath: str) -> list[dict]:
 
 
 def ensure_csv(filepath: str, columns: list[str]) -> None:
-    """Create the CSV with headers only if it does not exist yet."""
+    """Create the CSV with headers if missing, and add any missing columns to existing files."""
     if not os.path.exists(filepath):
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         pd.DataFrame(columns=columns).to_csv(filepath, index=False)
+        return
+
+    df = read_csv(filepath)
+    if df.empty:
+        # Ensure header row exists even if file exists but has no data
+        pd.DataFrame(columns=columns).to_csv(filepath, index=False)
+        return
+
+    missing_columns = [col for col in columns if col not in df.columns]
+    if missing_columns:
+        for col in missing_columns:
+            df[col] = ""
+        write_csv(filepath, df)
 
 # ─────────────────────────────────────────────────────────────
 # Phase 2: Declaration Specific Methods
