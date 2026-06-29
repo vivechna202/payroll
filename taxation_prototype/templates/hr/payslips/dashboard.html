@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block page_title %}Payslip Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Payslip Dashboard</h2>
+    <p class="text-muted">Overview of payslip generation and distribution.</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Total Payslips</h5>
+                <h2>{{ stats.total }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h5 class="card-title">Draft</h5>
+                <h2>{{ stats.draft }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning text-dark">
+            <div class="card-body">
+                <h5 class="card-title">Confirmed</h5>
+                <h2>{{ stats.confirmed }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Paid</h5>
+                <h2>{{ stats.paid }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Ready for Payslip Generation (Processed/Locked Batches)</h5>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th>Batch ID</th>
+                    <th>Month</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for batch in batches %}
+                <tr>
+                    <td>{{ batch.batch_id }}</td>
+                    <td>{{ batch.month_name }} {{ batch.year }}</td>
+                    <td>{{ batch.description }}</td>
+                    <td>
+                        <span class="badge {% if batch.status == 'LOCKED' %}bg-danger{% elif batch.status == 'PROCESSED' %}bg-primary{% else %}bg-success{% endif %}">
+                            {{ batch.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('payslips.batch_payslips', batch_id=batch.batch_id) }}" class="btn btn-sm btn-outline-primary">Manage Payslips</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No processed batches found for payslip generation.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

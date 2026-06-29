@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Team Payroll Overview – MSS Portal{% endblock %}
+{% block page_title %}Team Payroll Overview{% endblock %}
+{% block page_subtitle %}Audit history of payroll for direct reports{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('ess.team_dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Employee</th>
+                        <th>Period</th>
+                        <th class="text-end">Gross Salary</th>
+                        <th class="text-end">Deductions</th>
+                        <th class="text-end fw-bold text-success">Net Payout</th>
+                        <th class="text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    {% for p in payroll_history %}
+                    {% set gross = p.gross_salary|float %}
+                    {% set net = p.net_salary|float %}
+                    {% set deductions = gross - net %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ p.name }}</div>
+                            <small class="text-muted font-monospace">{{ p.employee_id }}</small>
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ p.month }}/{{ p.financial_year }}</div>
+                            <small class="text-muted font-monospace">{{ p.payroll_id }}</small>
+                        </td>
+                        <td class="text-end">₹{{ "{:,.2f}".format(gross) }}</td>
+                        <td class="text-end text-danger">-₹{{ "{:,.2f}".format(deductions) }}</td>
+                        <td class="text-end fw-bold text-success">₹{{ "{:,.2f}".format(net) }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if p.payroll_status == 'LOCKED' %}bg-danger{% else %}bg-success{% endif %}">
+                                {{ p.payroll_status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-5">No processed payroll records found for team.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

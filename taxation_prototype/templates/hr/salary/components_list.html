@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Salary Components – TaxPro HRMS{% endblock %}
+{% block meta_description %}Manage earnings and deduction salary components for your payroll structures.{% endblock %}
+{% block page_title %}Salary Components{% endblock %}
+{% block page_subtitle %}Phase 2 – Salary Structure Configuration · FY {{ fy }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- ── Stat Cards ─────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {% set card_data = [
+      ("Total Components", stats.total, "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z", "#6366f1", "rgba(99,102,241,0.15)"),
+      ("Earnings",         stats.earnings, "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6", "#10b981", "rgba(16,185,129,0.15)"),
+      ("Deductions",       stats.deductions, "M20 12H4", "#f59e0b", "rgba(245,158,11,0.15)"),
+      ("Inactive",         stats.inactive, "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636", "#ef4444", "rgba(239,68,68,0.15)"),
+    ] %}
+    {% for label, value, path, color, bg in card_data %}
+    <div class="rounded-2xl p-5 flex items-center gap-4 transition-transform duration-200 hover:-translate-y-0.5"
+         style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+           style="background-color: {{ bg }};">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color:{{ color }}">
+          <path stroke-linecap="round" stroke-linejoin="round" d="{{ path }}"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-2xl font-bold" style="color: {{ color }};">{{ value }}</p>
+        <p class="text-xs font-medium mt-0.5" style="color: var(--text-muted);">{{ label }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── Toolbar ─────────────────────────────────────────────── -->
+  <div class="rounded-2xl p-4" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+    <form method="GET" class="flex flex-wrap gap-3 items-center">
+      <!-- Search -->
+      <div class="flex-1 min-w-48 relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="text" name="search" value="{{ search }}" placeholder="Search by name or code…"
+               class="w-full pl-9 pr-3 py-2 rounded-xl text-sm outline-none focus:ring-2"
+               style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary); --tw-ring-color: #6366f1;">
+      </div>
+      <!-- Category filter -->
+      <select name="category" class="px-3 py-2 rounded-xl text-sm outline-none"
+              style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+        <option value="">All Categories</option>
+        <option value="Earning" {% if category_filter == 'Earning' %}selected{% endif %}>Earnings</option>
+        <option value="Deduction" {% if category_filter == 'Deduction' %}selected{% endif %}>Deductions</option>
+      </select>
+      <!-- Active filter -->
+      <select name="active" class="px-3 py-2 rounded-xl text-sm outline-none"
+              style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+        <option value="">All Status</option>
+        <option value="Yes" {% if active_filter == 'Yes' %}selected{% endif %}>Active</option>
+        <option value="No" {% if active_filter == 'No' %}selected{% endif %}>Inactive</option>
+      </select>
+      <button type="submit" class="px-4 py-2 rounded-xl text-sm font-medium text-white"
+              style="background-color: #6366f1;">Filter</button>
+      {% if search or category_filter or active_filter %}
+      <a href="{{ url_for('salary.list_components') }}" class="px-4 py-2 rounded-xl text-sm"
+         style="border: 1px solid var(--border-color); color: var(--text-secondary);">Clear</a>
+      {% endif %}
+      <div class="flex-1"></div>
+      <a href="{{ url_for('salary.new_component') }}"
+         class="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:scale-105"
+         style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Component
+      </a>
+    </form>
+  </div>
+
+  <!-- ── Components Table ─────────────────────────────────────── -->
+  <div class="rounded-2xl overflow-hidden" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+    {% if components %}
+    <table class="w-full text-sm">
+      <thead>
+        <tr style="border-bottom: 1px solid var(--border-color); background-color: var(--table-header-bg);">
+          <th class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider" style="color: var(--text-muted);">#</th>
+          <th class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Name / Code</th>
+          <th class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Category</th>
+          <th class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Type</th>
+          <th class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Value</th>
+          <th class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Taxable</th>
+          <th class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Status</th>
+          <th class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for comp in components %}
+        <tr class="transition-colors duration-150 hover:bg-white/5"
+            style="border-bottom: 1px solid var(--border-color);">
+          <td class="px-4 py-3 font-mono text-xs" style="color: var(--text-muted);">{{ comp.sequence }}</td>
+          <td class="px-4 py-3">
+            <a href="{{ url_for('salary.view_component', component_id=comp.component_id) }}"
+               class="font-semibold hover:underline" style="color: #818cf8;">{{ comp.name }}</a>
+            <div class="text-xs mt-0.5 font-mono px-1.5 py-0.5 rounded inline-block"
+                 style="background-color: rgba(99,102,241,0.1); color: #a5b4fc;">{{ comp.code }}</div>
+          </td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                  style="{% if comp.category == 'Earning' %}background-color: rgba(16,185,129,0.15); color: #34d399;{% else %}background-color: rgba(245,158,11,0.15); color: #fbbf24;{% endif %}">
+              {{ comp.category }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-xs" style="color: var(--text-secondary);">{{ comp.computation_type }}</td>
+          <td class="px-4 py-3 text-xs font-mono" style="color: var(--text-primary);">
+            {% if comp.computation_type == 'Fixed' %}
+              ₹{{ comp.amount | float | int if comp.amount else '0' }}
+            {% elif comp.computation_type == 'Percentage' %}
+              {{ comp.percentage }}% of {{ comp.percentage_of }}
+            {% else %}
+              <span class="italic" style="color: var(--text-muted);">Formula</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                  style="{% if comp.taxable == 'Yes' %}background-color: rgba(239,68,68,0.15); color: #f87171;{% else %}background-color: rgba(100,116,139,0.15); color: var(--text-muted);{% endif %}">
+              {{ comp.taxable }}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                  style="{% if comp.active == 'Yes' %}background-color: rgba(16,185,129,0.15); color: #34d399;{% else %}background-color: rgba(100,116,139,0.2); color: var(--text-muted);{% endif %}">
+              {{ 'Active' if comp.active == 'Yes' else 'Inactive' }}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex gap-2">
+              <a href="{{ url_for('salary.edit_component', component_id=comp.component_id) }}"
+                 class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
+                 style="border: 1px solid var(--border-color); color: var(--text-secondary);"
+                 onmouseover="this.style.color='#818cf8';this.style.borderColor='#6366f1';"
+                 onmouseout="this.style.color='var(--text-secondary)';this.style.borderColor='var(--border-color)';">
+                Edit
+              </a>
+              <a href="{{ url_for('salary.view_component', component_id=comp.component_id) }}"
+                 class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
+                 style="border: 1px solid var(--border-color); color: var(--text-secondary);">
+                View
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-20 gap-3">
+      <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" style="color: var(--text-muted);">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+      <p class="text-sm font-medium" style="color: var(--text-secondary);">No salary components found</p>
+      <a href="{{ url_for('salary.new_component') }}"
+         class="px-4 py-2 rounded-xl text-sm font-medium text-white mt-2"
+         style="background-color: #6366f1;">Create First Component</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Footer Info ──────────────────────────────────────────── -->
+  <p class="text-xs text-center pb-2" style="color: var(--text-muted);">
+    Showing {{ components | length }} component(s) · Phase 2 – Salary Structures
+  </p>
+</div>
+{% endblock %}

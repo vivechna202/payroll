@@ -49,6 +49,14 @@ CSV_CHALLANS                = os.path.join(DUMMY_DATA_FOLDER, "challans.csv")
 CSV_DEDUCTOR_MASTER         = os.path.join(DUMMY_DATA_FOLDER, "deductor_master.csv")
 CSV_FORM16_PROCESSING_LOG   = os.path.join(DUMMY_DATA_FOLDER, "form16_processing_log.csv")
 CSV_FORM16_APPROVED         = os.path.join(DUMMY_DATA_FOLDER, "form16_approved.csv")
+CSV_CONTRACTS               = os.path.join(DUMMY_DATA_FOLDER, "contracts.csv")
+CSV_SALARY_COMPONENTS       = os.path.join(DUMMY_DATA_FOLDER, "salary_components.csv")
+CSV_SALARY_STRUCTURES       = os.path.join(DUMMY_DATA_FOLDER, "salary_structures.csv")
+CSV_STRUCTURE_COMPONENTS    = os.path.join(DUMMY_DATA_FOLDER, "structure_components.csv")
+CSV_PAYROLL_BATCHES         = os.path.join(DUMMY_DATA_FOLDER, "payroll_batches.csv")
+CSV_STATUTORY_CONFIG        = os.path.join(DUMMY_DATA_FOLDER, "statutory_configs.csv")
+CSV_PAYSLIPS                = os.path.join(DUMMY_DATA_FOLDER, "payslips.csv")
+CSV_FNF                     = os.path.join(DUMMY_DATA_FOLDER, "fnf_settlements.csv")
 
 
 # ──────────────────────────────────────────────
@@ -82,6 +90,7 @@ DUMMY_USERS = {
 CURRENT_FY = "2024-25"
 PF_PERCENTAGE = 12.0
 PROFESSIONAL_TAX = 200.0
+PAYROLL_DEFAULT_PAYABLE_DAYS = 26
 
 # ──────────────────────────────────────────────
 # Tax Rules (Phase 5)

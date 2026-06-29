@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} – TaxPro HRMS Reports{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}Read-only audit report{% endblock %}
+
+{% block content %}
+{# Shared filter bar + export bar used by all report pages #}
+
+<!-- Filter Bar -->
+<div class="card mb-4 border-0 shadow-sm">
+  <div class="card-body py-3">
+    <form method="GET" id="report-filter-form" class="row g-2 align-items-end">
+      {% for key, val in extra_hidden_fields.items() %}
+      <input type="hidden" name="{{ key }}" value="{{ val }}">
+      {% endfor %}
+
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Financial Year</label>
+        <input type="text" name="fy" class="form-control form-control-sm" value="{{ filters.fy }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Month</label>
+        <select name="month" class="form-select form-select-sm">
+          <option value="">All Months</option>
+          {% set mnames=['January','February','March','April','May','June','July','August','September','October','November','December'] %}
+          {% for i in range(1,13) %}
+          <option value="{{ i }}" {% if filters.month == i|string %}selected{% endif %}>{{ mnames[i-1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Department</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">All Depts</option>
+          {% for d in departments %}
+          <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Employee ID</label>
+        <input type="text" name="employee_id" class="form-control form-control-sm" value="{{ filters.employee_id }}" placeholder="e.g. EMP001">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Batch ID</label>
+        <select name="batch_id" class="form-select form-select-sm">
+          <option value="">All Batches</option>
+          {% for b in batches %}
+          <option value="{{ b.batch_id }}" {% if filters.batch_id == b.batch_id %}selected{% endif %}>{{ b.batch_id }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Filter</button>
+        <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Export Bar -->
+<div class="d-flex justify-content-end gap-2 mb-3">
+  <button onclick="exportReport('excel')" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+  <button onclick="exportReport('csv')" class="btn btn-secondary btn-sm"><i class="bi bi-filetype-csv"></i> CSV</button>
+  <button onclick="window.print()" class="btn btn-outline-dark btn-sm"><i class="bi bi-printer"></i> Print / PDF</button>
+</div>
+
+{# Page content injected here #}
+{% block report_content %}{% endblock %}
+
+<script>
+function exportReport(fmt) {
+  const params = new URLSearchParams(window.location.search);
+  params.set('format', fmt);
+  {% if export_extra %}
+  {% for k, v in export_extra.items() %}
+  params.set('{{ k }}', '{{ v }}');
+  {% endfor %}
+  {% endif %}
+  window.location.href = '/hr/reports/export?' + params.toString();
+}
+</script>
+
+<style>
+@media print {
+  nav, header, .card.mb-4, .d-flex.mb-3, .d-flex.justify-content-end { display: none !important; }
+  .table-responsive { overflow: visible !important; }
+  .table { font-size: 0.7rem !important; }
+}
+</style>
+{% endblock %}

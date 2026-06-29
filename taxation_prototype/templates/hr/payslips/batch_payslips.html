@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block page_title %}Batch Payslips - {{ batch.batch_id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>Payslips for Batch {{ batch.batch_id }}</h2>
+        <p class="text-muted">{{ batch.month_name }} {{ batch.year }} - {{ batch.description }}</p>
+    </div>
+    <div>
+        <a href="{{ url_for('payslips.dashboard') }}" class="btn btn-secondary me-2">Back to Dashboard</a>
+        <form action="{{ url_for('payslips.generate_batch', batch_id=batch.batch_id) }}" method="POST" class="d-inline">
+            <button type="submit" class="btn btn-primary">Generate Missing Payslips</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th>Payslip ID</th>
+                    <th>Employee</th>
+                    <th>Gross Salary</th>
+                    <th>Net Salary</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ps in payslips %}
+                <tr>
+                    <td>{{ ps.payslip_id }}</td>
+                    <td>{{ ps.name }} <br><small class="text-muted">{{ ps.employee_id }}</small></td>
+                    <td>₹{{ "%.2f"|format(ps.gross_salary|default(0)|float) }}</td>
+                    <td>₹{{ "%.2f"|format(ps.net_salary|default(0)|float) }}</td>
+                    <td>
+                        <span class="badge {% if ps.status == 'Paid' %}bg-success{% elif ps.status == 'Confirmed' %}bg-warning text-dark{% elif ps.status == 'Cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {{ ps.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('payslips.view_payslip', payslip_id=ps.payslip_id) }}" class="btn btn-sm btn-outline-info" title="View"><i class="bi bi-eye"></i> View</a>
+                        <a href="{{ url_for('payslips.download_payslip', payslip_id=ps.payslip_id) }}" class="btn btn-sm btn-outline-secondary" title="Download PDF"><i class="bi bi-download"></i> PDF</a>
+                        
+                        {% if ps.status == 'Draft' %}
+                        <form action="{{ url_for('payslips.update_status', payslip_id=ps.payslip_id) }}" method="POST" class="d-inline">
+                            <input type="hidden" name="status" value="Confirmed">
+                            <button type="submit" class="btn btn-sm btn-outline-warning">Confirm</button>
+                        </form>
+                        <form action="{{ url_for('payslips.cancel_draft', payslip_id=ps.payslip_id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                        </form>
+                        {% elif ps.status == 'Confirmed' %}
+                        <form action="{{ url_for('payslips.update_status', payslip_id=ps.payslip_id) }}" method="POST" class="d-inline">
+                            <input type="hidden" name="status" value="Paid">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Mark Paid</button>
+                        </form>
+                        {% elif ps.status == 'Cancelled' %}
+                        <form action="{{ url_for('payslips.regenerate_draft', payslip_id=ps.payslip_id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">Regenerate</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">No payslips generated for this batch yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

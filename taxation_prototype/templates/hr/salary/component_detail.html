@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}{{ comp.name }} – Salary Component – TaxPro HRMS{% endblock %}
+{% block page_title %}{{ comp.name }}{% endblock %}
+{% block page_subtitle %}Salary Component · {{ comp.code }} · {{ comp.category }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs" style="color: var(--text-muted);">
+    <a href="{{ url_for('salary.list_components') }}" class="hover:underline" style="color:#818cf8;">Salary Components</a>
+    <span>/</span><span>{{ comp.name }}</span>
+  </div>
+
+  <!-- ── Header card ────────────────────────────────────────── -->
+  <div class="rounded-2xl p-6" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold"
+             style="background: {% if comp.category == 'Earning' %}rgba(16,185,129,0.15){% else %}rgba(245,158,11,0.15){% endif %}; color: {% if comp.category == 'Earning' %}#34d399{% else %}#fbbf24{% endif %};">
+          {{ comp.code[:2] }}
+        </div>
+        <div>
+          <h1 class="text-xl font-bold" style="color: var(--text-primary);">{{ comp.name }}</h1>
+          <div class="flex items-center gap-2 mt-1 flex-wrap">
+            <code class="text-xs px-2 py-0.5 rounded" style="background-color: rgba(99,102,241,0.15); color: #a5b4fc;">{{ comp.code }}</code>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                  style="{% if comp.category == 'Earning' %}background-color: rgba(16,185,129,0.15); color: #34d399;{% else %}background-color: rgba(245,158,11,0.15); color: #fbbf24;{% endif %}">
+              {{ comp.category }}
+            </span>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                  style="{% if comp.active == 'Yes' %}background-color: rgba(16,185,129,0.15); color: #34d399;{% else %}background-color: rgba(100,116,139,0.2); color: var(--text-muted);{% endif %}">
+              {{ 'Active' if comp.active == 'Yes' else 'Inactive' }}
+            </span>
+          </div>
+          {% if comp.description %}
+          <p class="text-sm mt-2" style="color: var(--text-secondary);">{{ comp.description }}</p>
+          {% endif %}
+        </div>
+      </div>
+      <!-- Action buttons -->
+      <div class="flex gap-2 flex-shrink-0 flex-wrap">
+        <a href="{{ url_for('salary.edit_component', component_id=comp.component_id) }}"
+           class="px-4 py-2 rounded-xl text-sm font-medium text-white"
+           style="background-color: #6366f1;">Edit</a>
+        <form method="POST" action="{{ url_for('salary.toggle_component', component_id=comp.component_id) }}" class="inline">
+          <button type="submit"
+                  class="px-4 py-2 rounded-xl text-sm font-medium"
+                  style="border: 1px solid {% if comp.active == 'Yes' %}#f59e0b{% else %}#10b981{% endif %}; color: {% if comp.active == 'Yes' %}#fbbf24{% else %}#34d399{% endif %};">
+            {{ 'Deactivate' if comp.active == 'Yes' else 'Activate' }}
+          </button>
+        </form>
+        <form method="POST" action="{{ url_for('salary.remove_component', component_id=comp.component_id) }}" class="inline"
+              onsubmit="return confirm('Delete this component? This cannot be undone.');">
+          <button type="submit"
+                  class="px-4 py-2 rounded-xl text-sm font-medium"
+                  style="border: 1px solid rgba(239,68,68,0.4); color: #f87171;">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- ── Computation Details ────────────────────────────────── -->
+    <div class="rounded-2xl p-6 space-y-4" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+      <h2 class="text-xs font-bold uppercase tracking-widest" style="color: var(--text-muted);">Computation</h2>
+
+      {% macro detail_row(label, value, mono=false) %}
+      <div class="flex justify-between items-start py-2.5" style="border-bottom: 1px solid var(--border-color);">
+        <span class="text-xs" style="color: var(--text-muted);">{{ label }}</span>
+        <span class="text-sm font-medium {% if mono %}font-mono{% endif %}" style="color: var(--text-primary);">{{ value }}</span>
+      </div>
+      {% endmacro %}
+
+      {{ detail_row("Type", comp.computation_type) }}
+      {{ detail_row("Sequence", comp.sequence) }}
+      {{ detail_row("Taxable", comp.taxable) }}
+      {{ detail_row("Category", comp.category) }}
+
+      {% if comp.computation_type == 'Fixed' %}
+        {{ detail_row("Fixed Amount", "₹" + (comp.amount | string), mono=true) }}
+      {% elif comp.computation_type == 'Percentage' %}
+        {{ detail_row("Percentage", comp.percentage ~ "%") }}
+        {{ detail_row("Percentage Of", comp.percentage_of, mono=true) }}
+      {% elif comp.computation_type == 'Formula' %}
+      <div class="py-2.5 space-y-1.5">
+        <p class="text-xs" style="color: var(--text-muted);">Formula Expression</p>
+        <pre class="text-xs p-3 rounded-xl overflow-x-auto whitespace-pre-wrap"
+             style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: #a5b4fc; font-family: monospace;">{{ comp.formula }}</pre>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Used In Structures ─────────────────────────────────── -->
+    <div class="rounded-2xl p-6 space-y-4" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+      <h2 class="text-xs font-bold uppercase tracking-widest" style="color: var(--text-muted);">Used In Structures</h2>
+      {% if used_in %}
+      <ul class="space-y-2">
+        {% for st in used_in %}
+        <li>
+          <a href="{{ url_for('salary.view_structure', structure_id=st.structure_id) }}"
+             class="flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 hover:scale-[1.01]"
+             style="background-color: var(--input-bg); border: 1px solid var(--border-color);">
+            <div>
+              <p class="text-sm font-semibold" style="color: var(--text-primary);">{{ st.name }}</p>
+              <p class="text-xs mt-0.5" style="color: var(--text-muted);">{{ st.structure_type }} · {{ st.payroll_frequency }}</p>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full"
+                  style="{% if st.active == 'Yes' %}background-color: rgba(16,185,129,0.15); color: #34d399;{% else %}background-color: rgba(100,116,139,0.2); color: var(--text-muted);{% endif %}">
+              {{ 'Active' if st.active == 'Yes' else 'Archived' }}
+            </span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="flex flex-col items-center py-8 gap-2 text-center">
+        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color: var(--text-muted);">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+        </svg>
+        <p class="text-xs" style="color: var(--text-muted);">Not yet assigned to any salary structure.</p>
+        <a href="{{ url_for('salary.list_structures') }}" class="text-xs hover:underline" style="color:#818cf8;">Browse Structures →</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Audit trail ─────────────────────────────────────────── -->
+  <div class="rounded-2xl px-6 py-4" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+    <div class="flex gap-6 text-xs" style="color: var(--text-muted);">
+      <span>ID: <code class="font-mono" style="color: var(--text-secondary);">{{ comp.component_id }}</code></span>
+      <span>Created: {{ comp.created_at[:10] if comp.created_at else '—' }}</span>
+      <span>Updated: {{ comp.updated_at[:10] if comp.updated_at else '—' }}</span>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

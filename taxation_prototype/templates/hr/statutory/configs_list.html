@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Statutory Configurations</h2>
+    <a href="{{ url_for('statutory.create_config') }}" class="btn btn-primary">Create Configuration</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Rule Type</th>
+                    <th>State</th>
+                    <th>Effective From</th>
+                    <th>Enabled</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for config in configs %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ config.rule_type }}</span></td>
+                    <td>{{ config.state }}</td>
+                    <td>{{ config.effective_from }}</td>
+                    <td>
+                        <span class="badge {% if config.enabled == 'Yes' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ config.enabled }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('statutory.edit_config', config_id=config.config_id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <form action="{{ url_for('statutory.toggle_config', config_id=config.config_id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-sm {% if config.enabled == 'Yes' %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                                {% if config.enabled == 'Yes' %}Disable{% else %}Enable{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No statutory configurations found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

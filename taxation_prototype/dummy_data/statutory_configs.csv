@@ -1,0 +1,10 @@
+config_id,rule_type,state,enabled,effective_from,parameters_json,created_at,updated_at
+STAT-PF,PF,All,Yes,2024-04-01,"{""employee_rate"": 12.0, ""employer_rate"": 12.0, ""eps_rate"": 8.33, ""epf_rate"": 3.67, ""wage_ceiling"": 15000.0, ""vpf_rate"": 0.0, ""enable_eps_split"": true, ""respect_wage_ceiling"": true}",2026-06-28T23:26:14.315885,2026-06-28T23:26:14.315885
+STAT-ESI,ESI,All,Yes,2024-04-01,"{""employee_rate"": 0.75, ""employer_rate"": 3.25, ""wage_ceiling"": 21000.0}",2026-06-28T23:26:14.315885,2026-06-28T23:26:14.315885
+STAT-PT-MH,PT,Maharashtra,Yes,2024-04-01,"{""slabs"": [{""min"": 0, ""max"": 7500, ""amount"": 0.0}, {""min"": 7500, ""max"": 10000, ""amount"": 175.0}, {""min"": 10000, ""max"": 99999999, ""amount"": 200.0, ""feb_amount"": 250.0}]}",2026-06-28T23:26:14.315885,2026-06-28T23:26:14.315885
+STAT-PT-KA,PT,Karnataka,Yes,2024-04-01,"{""slabs"": [{""min"": 0, ""max"": 25000, ""amount"": 0.0}, {""min"": 25000, ""max"": 99999999, ""amount"": 200.0}]}",2026-06-28T23:26:14.315885,2026-06-28T23:26:14.315885
+STAT-PT-TN,PT,Tamil Nadu,Yes,2024-04-01,"{""slabs"": [{""min"": 0, ""max"": 21000, ""amount"": 0.0}, {""min"": 21000, ""max"": 30000, ""amount"": 100.0}, {""min"": 30000, ""max"": 45000, ""amount"": 150.0}, {""min"": 45000, ""max"": 99999999, ""amount"": 200.0}]}",2026-06-28T23:26:14.315885,2026-06-28T23:26:14.315885
+STAT-LWF-MH,LWF,Maharashtra,Yes,2024-04-01,"{""employee_contribution"": 25.0, ""employer_contribution"": 75.0, ""deduction_months"": [6, 12]}",2026-06-28T23:26:14.315885,2026-06-28T23:26:14.315885
+STAT-LWF-KA,LWF,Karnataka,Yes,2024-04-01,"{""employee_contribution"": 20.0, ""employer_contribution"": 40.0, ""deduction_months"": [12]}",2026-06-28T23:26:14.315885,2026-06-28T23:26:14.315885
+STAT-LWF-TN,LWF,Tamil Nadu,Yes,2024-04-01,"{""employee_contribution"": 10.0, ""employer_contribution"": 20.0, ""deduction_months"": [12]}",2026-06-28T23:26:14.315885,2026-06-28T23:26:14.315885
+STAT-LWF-DL,LWF,Delhi,Yes,2024-04-01,"{""employee_contribution"": 0.75, ""employer_contribution"": 2.25, ""deduction_months"": [6, 12]}",2026-06-28T23:26:14.315885,2026-06-28T23:26:14.315885

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Statutory Dashboard</h2>
+    <p class="text-muted">Overview of statutory compliance and configurations</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Total Configs</h5>
+                <h2>{{ configs|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Active Configs</h5>
+                <h2>{{ active_configs|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Active Configurations by Rule</h5>
+        <a href="{{ url_for('statutory.list_configs') }}" class="btn btn-sm btn-outline-primary">Manage Configs</a>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% set rule_types = ['PF', 'ESI', 'PT', 'LWF'] %}
+            {% for rt in rule_types %}
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 shadow-sm border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="text-uppercase text-muted mb-2">{{ rt }}</h6>
+                        {% set rt_configs = active_configs | selectattr('rule_type', 'equalto', rt) | list %}
+                        <h3 class="mb-0">{{ rt_configs|length }} <small class="text-muted fs-6">Active</small></h3>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Recent Payroll Impact (Placeholder)</h5>
+    </div>
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-bar-chart fs-1"></i>
+        <p class="mt-3">Run a payroll batch to see statutory deductions here.</p>
+    </div>
+</div>
+{% endblock %}

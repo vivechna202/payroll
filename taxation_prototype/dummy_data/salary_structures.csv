@@ -1,0 +1,2 @@
+structure_id,name,structure_type,payroll_frequency,description,active,created_at,updated_at
+SS-001,Standard Monthly Structure,Employee,Monthly,Default structure for permanent employees,Yes,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162

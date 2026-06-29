@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Profile: {{ employee.name }} – TaxPro HRMS{% endblock %}
+{% block page_title %}{{ employee.name }} Profile{% endblock %}
+{% block page_subtitle %}Personal information, banking data, and employment contract history{% endblock %}
+
+{% block content %}
+
+<!-- Back to list if HR -->
+{% if session.user.role == 'hr' %}
+<div class="mb-6">
+  <a href="{{ url_for('dashboard') }}" class="btn-secondary flex items-center gap-2 max-w-max">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+    Back to Directory
+  </a>
+</div>
+{% endif %}
+
+<!-- Main layout grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Left: Employee Personal & Bank Details -->
+  <div class="space-y-6">
+    <div class="card">
+      <div class="flex flex-col items-center text-center pb-6 border-b mb-6" style="border-color: var(--border-color);">
+        <div class="w-20 h-20 rounded-full bg-indigo-900/30 flex items-center justify-center border-2 border-brand-500 mb-3 shadow-inner">
+          <span class="text-2xl font-bold text-brand-400">
+            {{ employee.name[0] if employee.name else 'E' }}
+          </span>
+        </div>
+        <h2 class="text-lg font-bold text-slate-100">{{ employee.name }}</h2>
+        <p class="text-xs text-slate-400 mt-1 font-mono">{{ employee.employee_id }}</p>
+        <span class="pill-badge mt-2.5 {% if employee.status == 'ACTIVE' %}pill-green{% else %}pill-red{% endif %}">
+          {{ employee.status }}
+        </span>
+      </div>
+
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Employment Details</h3>
+      <div class="space-y-4 mb-6 text-sm">
+        <div>
+          <label class="form-label">Email</label>
+          <p class="font-medium text-slate-200">{{ employee.email or 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="form-label">Department</label>
+          <p class="font-medium text-slate-200">{{ employee.department or 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="form-label">Designation</label>
+          <p class="font-medium text-slate-200">{{ employee.designation or 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="form-label">Date of Joining</label>
+          <p class="font-medium text-slate-200">{{ employee.date_of_joining or 'N/A' }}</p>
+        </div>
+      </div>
+
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Statutory & Bank Details</h3>
+      <div class="space-y-4 text-sm">
+        <div>
+          <label class="form-label">PAN Number</label>
+          <p class="font-mono text-slate-200">{{ employee.pan or 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="form-label">UAN Number</label>
+          <p class="font-mono text-slate-200">{{ employee.uan or 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="form-label">Bank Account</label>
+          <p class="font-mono text-slate-200">{{ employee.bank_account or 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="form-label">IFSC Code</label>
+          <p class="font-mono text-slate-200">{{ employee.ifsc or 'N/A' }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Active Contract Summary & Timeline -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Active Contract Section -->
+    <div class="card">
+      <h3 class="text-sm font-semibold border-b pb-3 mb-4" style="color: var(--text-primary); border-color: var(--border-color);">
+        Current Active Contract
+      </h3>
+
+      {% if active_contract %}
+      <div class="p-4 rounded-xl border border-slate-700/60 bg-slate-900/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-950/40 border border-emerald-900/50 flex items-center justify-center">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <div class="font-bold text-slate-200">
+              {% if session.user.role == 'hr' %}
+                <a href="{{ url_for('contracts.view_contract', contract_id=active_contract.contract_id) }}" class="text-brand-400 hover:underline font-mono">
+                  {{ active_contract.contract_id }}
+                </a>
+              {% else %}
+                <span class="font-mono">{{ active_contract.contract_id }}</span>
+              {% endif %}
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Validity: {{ active_contract.contract_start_date }} to {{ active_contract.contract_end_date or 'Indefinite' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 md:text-right">
+          <div>
+            <p class="text-[10px] uppercase text-slate-500 font-semibold">Basic Salary</p>
+            <p class="text-sm font-bold text-slate-200 font-mono mt-0.5">
+              {{ active_contract.currency or 'INR' }} {{ "{:,.2f}".format(active_contract.basic_salary | float) }}
+            </p>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase text-slate-500 font-semibold">Gross Salary</p>
+            <p class="text-sm font-bold text-slate-200 font-mono mt-0.5">
+              {{ active_contract.currency or 'INR' }} {{ "{:,.2f}".format(active_contract.gross_salary | float) }}
+            </p>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="p-6 text-center rounded-xl border border-dashed border-slate-700/60 bg-slate-900/10 text-slate-400 text-sm">
+        <svg class="w-8 h-8 text-slate-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <p class="font-medium">No active contract found</p>
+        {% if session.user.role == 'hr' %}
+        <p class="text-xs text-slate-500 mt-1">This employee has no active running contract. Click below to create one.</p>
+        <a href="{{ url_for('contracts.new_contract') }}" class="btn-primary py-1.5 px-4 text-xs mt-3 inline-flex items-center gap-1">
+          Create Contract
+        </a>
+        {% else %}
+        <p class="text-xs text-slate-500 mt-1">Please reach out to the HR department to activate your payroll contract.</p>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Contract Timeline / History Section -->
+    <div class="card">
+      <h3 class="text-sm font-semibold border-b pb-3 mb-4" style="color: var(--text-primary); border-color: var(--border-color);">
+        Contract History & Timeline
+      </h3>
+
+      {% if contract_history %}
+      <div class="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-700/60">
+        
+        {% for c in contract_history %}
+        <div class="relative">
+          <!-- Dot marker -->
+          <span class="absolute -left-6 top-1.5 w-4.5 h-4.5 rounded-full border-4 border-slate-800 bg-slate-400 flex items-center justify-center shadow-md
+            {% if c.status == 'Running' %}bg-emerald-500 border-emerald-900/60{% elif c.status == 'Draft' %}bg-indigo-500 border-indigo-900/60{% elif c.status == 'Expired' %}bg-amber-500 border-amber-900/60{% else %}bg-red-500 border-red-900/60{% endif %}"
+            style="width: 1rem; height: 1rem; left: -1.35rem;">
+          </span>
+
+          <div class="p-4 rounded-xl border border-slate-800/80 bg-slate-900/20 hover:bg-slate-900/40 transition-colors">
+            <div class="flex justify-between items-start gap-4">
+              <div>
+                <span class="text-xs font-mono font-bold text-slate-300">
+                  {% if session.user.role == 'hr' %}
+                    <a href="{{ url_for('contracts.view_contract', contract_id=c.contract_id) }}" class="text-brand-400 hover:underline">
+                      {{ c.contract_id }}
+                    </a>
+                  {% else %}
+                    {{ c.contract_id }}
+                  {% endif %}
+                </span>
+                <span class="pill-badge text-[10px] ml-2 px-1.5 {% if c.status == 'Running' %}pill-green{% elif c.status == 'Draft' %}pill-blue{% elif c.status == 'Expired' %}pill-amber{% else %}pill-red{% endif %}">
+                  {{ c.status }}
+                </span>
+                
+                <h4 class="text-sm font-semibold mt-1 text-slate-200">{{ c.salary_structure_type }} Contract</h4>
+                <p class="text-xs text-slate-400 mt-1">
+                  Duration: {{ c.contract_start_date }} to {{ c.contract_end_date or 'Present (Indefinite)' }}
+                </p>
+              </div>
+
+              <div class="text-right text-xs">
+                <p class="text-slate-500 uppercase tracking-wide font-semibold">Monthly Gross</p>
+                <p class="text-sm font-bold text-slate-300 font-mono mt-0.5">{{ c.currency or 'INR' }} {{ "{:,.2f}".format(c.gross_salary | float) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+
+      </div>
+      {% else %}
+      <div class="p-6 text-center text-slate-500 text-sm">
+        No contract history available for this employee.
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}

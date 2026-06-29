@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}My Documents – ESS Portal{% endblock %}
+{% block page_title %}My Documents{% endblock %}
+{% block page_subtitle %}Access generated documents and certifications{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('ess.my_dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Document Name</th>
+                        <th>Type</th>
+                        <th>Generation Date</th>
+                        <th>Source</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    {% for doc in documents %}
+                    <tr>
+                        <td class="fw-bold"><i class="bi bi-file-earmark-pdf text-danger fs-5 me-2"></i> {{ doc.name }}</td>
+                        <td>{{ doc.type }}</td>
+                        <td>{{ doc.date }}</td>
+                        <td><small class="text-muted">{{ doc.source }}</small></td>
+                        <td class="text-end">
+                            {% if doc.type == 'Form 16 Tax Document' %}
+                            <a href="{{ url_for('employee.form16_download') }}" class="btn btn-sm btn-outline-primary">Go to Download</a>
+                            {% elif doc.type == 'Contract' %}
+                            <a href="{{ url_for('ess.my_contracts') }}" class="btn btn-sm btn-outline-primary">View Contract</a>
+                            {% elif doc.type == 'Full & Final Settlement' %}
+                            <a href="{{ url_for('employee.my_fnf') }}" class="btn btn-sm btn-outline-primary">F&F Settlement</a>
+                            {% else %}
+                            <span class="text-muted small">View Only</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-folder-x fs-1 opacity-25 d-block mb-3"></i>
+                            No documents found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

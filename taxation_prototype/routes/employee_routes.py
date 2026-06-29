@@ -308,3 +308,89 @@ def download_approved_form16(filename):
         return redirect(url_for("employee.form16_download"))
         
     return send_file(file_path, as_attachment=True, download_name=filename, mimetype="application/pdf")
+
+
+@employee_bp.route("/profile")
+@employee_required
+def profile():
+    user = session["user"]
+    role = user.get("role")
+    
+    # Determine which employee profile to show
+    target_employee_id = request.args.get("employee_id", "").strip()
+    
+    if role == "employee":
+        # Employees can only view their own profile
+        target_employee_id = user["employee_id"]
+    elif role == "hr":
+        # HR can view anyone's profile, but if not specified, default to their own
+        if not target_employee_id:
+            target_employee_id = user["employee_id"]
+            
+    # Fetch employee data
+    from services.csv_service import read_csv_row
+    employee_data = read_csv_row(CSV_EMPLOYEES, "employee_id", target_employee_id)
+    if not employee_data:
+        flash(f"Employee {target_employee_id} not found.", "danger")
+        return redirect(url_for("dashboard"))
+        
+    # Fetch active contract and history
+    from services.contract_service import get_active_contract, get_contracts_for_employee
+    active_contract = get_active_contract(target_employee_id)
+    contract_history = get_contracts_for_employee(target_employee_id)
+    
+    return render_template(
+        "employee_profile.html",
+        user=user,
+        employee=employee_data,
+        active_contract=active_contract,
+        contract_history=contract_history,
+        fy=CURRENT_FY,
+        active_page="my_profile" if role == "employee" else "employee_directory"
+    )
+
+import io
+from flask import send_file
+from services import payslip_service
+
+@employee_bp.route("/payslips")
+@employee_required
+def history():
+    user = session["user"]
+    payslips = payslip_service.get_employee_payslips(user["employee_id"])
+    return render_template("employee/payslips/history.html", payslips=payslips)
+
+@employee_bp.route("/payslips/<payslip_id>")
+@employee_required
+def view_payslip(payslip_id):
+    user = session["user"]
+    details = payslip_service.get_payslip_details(payslip_id, user["employee_id"], "employee")
+    if not details:
+        flash("Payslip not found or access denied.", "danger")
+        return redirect(url_for("employee.history"))
+    return render_template("employee/payslips/view_payslip.html", **details)
+
+@employee_bp.route("/payslips/<payslip_id>/download")
+@employee_required
+def download_payslip(payslip_id):
+    user = session["user"]
+    details = payslip_service.get_payslip_details(payslip_id, user["employee_id"], "employee")
+    if not details:
+        flash("Payslip not found or access denied.", "danger")
+        return redirect(url_for("employee.history"))
+        
+    pdf_bytes = payslip_service.generate_payslip_pdf(details)
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"{payslip_id}.pdf"
+    )
+
+@employee_bp.route("/my-fnf")
+@employee_required
+def my_fnf():
+    user = session["user"]
+    from services.fnf_service import get_employee_settlements
+    settlements = get_employee_settlements(user["employee_id"])
+    return render_template("employee/my_fnf.html", user=user, settlements=settlements, active_page="my_fnf")

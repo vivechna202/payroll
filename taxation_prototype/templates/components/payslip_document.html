@@ -1,0 +1,154 @@
+<!-- templates/components/payslip_document.html -->
+<style>
+    @media print {
+        body { background: white; }
+        #sidebar, header, .no-print { display: none !important; }
+        .payslip-container { box-shadow: none !important; border: none !important; }
+        main { padding: 0 !important; overflow: visible !important; }
+    }
+    .payslip-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        color: #333;
+        font-family: 'Helvetica', 'Arial', sans-serif;
+    }
+    .payslip-table th, .payslip-table td {
+        border-color: #e2e8f0;
+    }
+</style>
+
+<div class="payslip-container border rounded shadow-sm p-5">
+    
+    <!-- Header: Company Details -->
+    <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4">
+        <div>
+            <h2 class="mb-1 text-dark" style="font-weight: 700;">{{ company.company_name or 'Company Name' }}</h2>
+            <p class="mb-0 text-muted">{{ company.address }}, {{ company.state }}</p>
+        </div>
+        <div class="text-end">
+            <h4 class="mb-1 text-primary">PAYSLIP</h4>
+            <p class="mb-0 text-muted">{{ payslip.month }}/{{ payslip.financial_year }}</p>
+        </div>
+    </div>
+
+    <!-- Employee Details -->
+    <div class="row mb-4">
+        <div class="col-sm-6">
+            <table class="table table-sm table-borderless mb-0">
+                <tr><th class="text-muted w-50">Employee ID:</th><td class="fw-bold">{{ employee.employee_id }}</td></tr>
+                <tr><th class="text-muted">Name:</th><td class="fw-bold">{{ employee.name }}</td></tr>
+                <tr><th class="text-muted">Designation:</th><td>{{ employee.designation }}</td></tr>
+                <tr><th class="text-muted">Department:</th><td>{{ employee.department }}</td></tr>
+            </table>
+        </div>
+        <div class="col-sm-6">
+            <table class="table table-sm table-borderless mb-0">
+                <tr><th class="text-muted w-50">Payslip ID:</th><td class="fw-bold">{{ payslip.payslip_id }}</td></tr>
+                <tr><th class="text-muted">PAN:</th><td>{{ employee.pan }}</td></tr>
+                <tr><th class="text-muted">Bank Account:</th><td>{{ employee.bank_account|default('N/A') }}</td></tr>
+                <tr><th class="text-muted">Status:</th>
+                    <td>
+                        <span class="badge {% if payslip.status == 'Paid' %}bg-success{% elif payslip.status == 'Confirmed' %}bg-primary{% else %}bg-secondary{% endif %}">
+                            {{ payslip.status }}
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Salary Details Table -->
+    <table class="table table-bordered payslip-table mb-4">
+        <thead class="bg-light">
+            <tr>
+                <th width="40%">Earnings</th>
+                <th width="15%" class="text-end">Amount</th>
+                <th width="15%" class="text-end text-muted">YTD</th>
+                <th width="40%">Deductions</th>
+                <th width="15%" class="text-end">Amount</th>
+                <th width="15%" class="text-end text-muted">YTD</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Basic Salary</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.basic) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.basic_salary) }}</td>
+                <td>Provident Fund (PF)</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.pf) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.employee_pf) }}</td>
+            </tr>
+            <tr>
+                <td>House Rent Allowance</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.hra) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.hra) }}</td>
+                <td>Professional Tax</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.pt) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.professional_tax) }}</td>
+            </tr>
+            <tr>
+                <td>Special Allowance</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.special) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.special_allowance) }}</td>
+                <td>TDS</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.tds) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.tds) }}</td>
+            </tr>
+            <tr>
+                <td>Other Allowances</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.other) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.other_allowances) }}</td>
+                <td>ESI</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.esi) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.esi_employee) }}</td>
+            </tr>
+            <!-- Future placeholders for BOL -->
+            <tr>
+                <td class="text-muted"><small><i>Bonus / Incentives</i></small></td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(payroll.bonus|default(0)|float + payroll.incentives|default(0)|float) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.bonus|default(0)|float + ytd.incentives|default(0)|float) }}</td>
+                <td class="text-muted"><small><i>Loss of Pay (LOP)</i></small></td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(payroll.lop_amount|default(0)|float) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.lop_amount|default(0)|float) }}</td>
+            </tr>
+            <tr class="bg-light fw-bold">
+                <td>Gross Salary</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.gross) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.gross_salary) }}</td>
+                <td>Total Deductions</td>
+                <td class="text-end">₹{{ "%.2f"|format(totals.gross - totals.net) }}</td>
+                <td class="text-end text-muted">₹{{ "%.2f"|format(ytd.gross_salary - ytd.net_salary) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Net Salary Highlight -->
+    <div class="d-flex justify-content-end mb-5">
+        <div class="bg-light border rounded p-3 text-center" style="min-width: 250px;">
+            <p class="text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.8rem;">Net Salary</p>
+            <h3 class="mb-0 text-success fw-bold">₹{{ "%.2f"|format(totals.net) }}</h3>
+        </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="row text-center mt-5 pt-4">
+        <div class="col-4">
+            <hr class="w-75 mx-auto border-secondary">
+            <p class="text-muted small mb-0">Employee Signature</p>
+        </div>
+        <div class="col-4">
+            <hr class="w-75 mx-auto border-secondary">
+            <p class="text-muted small mb-0">HR Signature</p>
+        </div>
+        <div class="col-4">
+            <hr class="w-75 mx-auto border-secondary">
+            <p class="text-muted small mb-0">Authorized Signatory</p>
+        </div>
+    </div>
+
+    <div class="text-center mt-4 text-muted small">
+        <p class="mb-0"><i>This is a system generated document and does not require a physical signature if digitally authorized.</i></p>
+    </div>
+
+</div>

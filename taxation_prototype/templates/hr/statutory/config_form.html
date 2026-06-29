@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>{% if config %}Edit{% else %}Create{% endif %} Statutory Configuration</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Rule Type</label>
+                    <select name="rule_type" class="form-select" id="ruleTypeSelect" {% if config %}disabled{% endif %} required>
+                        <option value="PF" {% if config and config.rule_type == 'PF' %}selected{% endif %}>Provident Fund (PF)</option>
+                        <option value="ESI" {% if config and config.rule_type == 'ESI' %}selected{% endif %}>Employee State Insurance (ESI)</option>
+                        <option value="PT" {% if config and config.rule_type == 'PT' %}selected{% endif %}>Professional Tax (PT)</option>
+                        <option value="LWF" {% if config and config.rule_type == 'LWF' %}selected{% endif %}>Labour Welfare Fund (LWF)</option>
+                    </select>
+                    {% if config %}
+                    <input type="hidden" name="rule_type" value="{{ config.rule_type }}">
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">State</label>
+                    <input type="text" name="state" class="form-control" value="{{ config.state if config else 'Delhi' }}" {% if config %}readonly{% endif %} required>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label class="form-label">Effective From</label>
+                    <input type="date" name="effective_from" class="form-control" value="{{ config.effective_from if config else '' }}" required>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="enabled" value="Yes" id="enabledCheck" {% if config and config.enabled == 'Yes' %}checked{% endif %}>
+                        <label class="form-check-label" for="enabledCheck">Enabled</label>
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- PF Parameters -->
+            <div id="pfParams" class="param-section mt-4" style="display: none;">
+                <h4>PF Parameters</h4>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Employee Rate (%)</label>
+                        <input type="number" step="0.01" name="pf_employee_rate" class="form-control" value="{{ config.parameters.employee_rate if config and config.rule_type == 'PF' else 12.0 }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Employer Rate (%)</label>
+                        <input type="number" step="0.01" name="pf_employer_rate" class="form-control" value="{{ config.parameters.employer_rate if config and config.rule_type == 'PF' else 12.0 }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">EPS Rate (%)</label>
+                        <input type="number" step="0.01" name="pf_eps_rate" class="form-control" value="{{ config.parameters.eps_rate if config and config.rule_type == 'PF' else 8.33 }}">
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Wage Ceiling</label>
+                        <input type="number" step="0.01" name="pf_wage_ceiling" class="form-control" value="{{ config.parameters.wage_ceiling if config and config.rule_type == 'PF' else 15000.0 }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="pf_respect_wage_ceiling" id="pfRespectCheck" {% if not config or (config.rule_type == 'PF' and config.parameters.get('respect_wage_ceiling', True)) %}checked{% endif %}>
+                            <label class="form-check-label" for="pfRespectCheck">Respect Wage Ceiling</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="pf_enable_eps_split" id="pfEpsCheck" {% if not config or (config.rule_type == 'PF' and config.parameters.get('enable_eps_split', True)) %}checked{% endif %}>
+                            <label class="form-check-label" for="pfEpsCheck">Enable EPS Split</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ESI Parameters -->
+            <div id="esiParams" class="param-section mt-4" style="display: none;">
+                <h4>ESI Parameters</h4>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Employee Rate (%)</label>
+                        <input type="number" step="0.01" name="esi_employee_rate" class="form-control" value="{{ config.parameters.employee_rate if config and config.rule_type == 'ESI' else 0.75 }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Employer Rate (%)</label>
+                        <input type="number" step="0.01" name="esi_employer_rate" class="form-control" value="{{ config.parameters.employer_rate if config and config.rule_type == 'ESI' else 3.25 }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Wage Ceiling</label>
+                        <input type="number" step="0.01" name="esi_wage_ceiling" class="form-control" value="{{ config.parameters.wage_ceiling if config and config.rule_type == 'ESI' else 21000.0 }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Raw JSON Parameters (PT / LWF) -->
+            <div id="rawParams" class="param-section mt-4" style="display: none;">
+                <h4>Configuration Details (JSON)</h4>
+                <div class="mb-3">
+                    <label class="form-label">Parameters (Slabs, Rules, etc.)</label>
+                    <textarea name="raw_parameters" rows="6" class="form-control font-monospace">{% if config and config.rule_type in ['PT', 'LWF'] %}{{ config.parameters | tojson(indent=2) }}{% elif not config %}{}{% endif %}</textarea>
+                    <div class="form-text">Provide JSON formatted parameters for PT slabs or LWF rules.</div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Save Configuration</button>
+                <a href="{{ url_for('statutory.list_configs') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const select = document.getElementById("ruleTypeSelect");
+        
+        function updateForms() {
+            document.querySelectorAll('.param-section').forEach(el => el.style.display = 'none');
+            const val = select.value;
+            if (val === 'PF') {
+                document.getElementById('pfParams').style.display = 'block';
+            } else if (val === 'ESI') {
+                document.getElementById('esiParams').style.display = 'block';
+            } else if (val === 'PT' || val === 'LWF') {
+                document.getElementById('rawParams').style.display = 'block';
+                // If it's empty, provide a template if not editing
+                const ta = document.querySelector('textarea[name="raw_parameters"]');
+                if (ta.value.trim() === '{}' || ta.value.trim() === '') {
+                    if (val === 'PT') {
+                        ta.value = JSON.stringify({
+                            "slabs": [
+                                {"min": 0, "max": 10000, "amount": 0},
+                                {"min": 10000, "max": 999999, "amount": 200, "feb_amount": 300}
+                            ]
+                        }, null, 2);
+                    } else if (val === 'LWF') {
+                        ta.value = JSON.stringify({
+                            "employee_contribution": 10,
+                            "employer_contribution": 20,
+                            "deduction_months": [6, 12]
+                        }, null, 2);
+                    }
+                }
+            }
+        }
+        
+        select.addEventListener('change', updateForms);
+        updateForms();
+    });
+</script>
+{% endblock %}

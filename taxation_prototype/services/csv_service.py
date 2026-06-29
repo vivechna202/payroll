@@ -100,6 +100,15 @@ def csv_to_records(filepath: str) -> list[dict]:
     return df.to_dict(orient="records")
 
 
+def get_all_employees() -> list[dict]:
+    """Return all employee records as a list of dicts."""
+    from config import CSV_EMPLOYEES
+    df = read_csv(CSV_EMPLOYEES)
+    if df.empty:
+        return []
+    return df.to_dict(orient="records")
+
+
 def ensure_csv(filepath: str, columns: list[str]) -> None:
     """Create the CSV with headers if missing, and add any missing columns to existing files."""
     if not os.path.exists(filepath):

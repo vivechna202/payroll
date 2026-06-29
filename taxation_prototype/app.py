@@ -18,7 +18,10 @@ from config import (
     CSV_EMPLOYEES, CSV_DECLARATIONS, CSV_DECLARATION_ITEMS, CSV_PROOFS, CSV_PAYROLL, CSV_EMPLOYEE_SALARY,
     CSV_TDS, CSV_DECLARATION_WINDOWS, CSV_FORM16, CSV_FORM16_HISTORY,
     DUMMY_USERS, CURRENT_FY, CSV_CHALLANS, CSV_DEDUCTOR_MASTER, CSI_FOLDER,
-    FORM16_PROCESSING_FOLDER, CSV_FORM16_PROCESSING_LOG, FORM16_MERGED_FOLDER, FORM16_SIGNED_FOLDER
+    FORM16_PROCESSING_FOLDER, CSV_FORM16_PROCESSING_LOG, FORM16_MERGED_FOLDER, FORM16_SIGNED_FOLDER,
+    CSV_CONTRACTS,
+    CSV_SALARY_COMPONENTS, CSV_SALARY_STRUCTURES, CSV_STRUCTURE_COMPONENTS,
+    CSV_PAYROLL_BATCHES, PAYROLL_DEFAULT_PAYABLE_DAYS, CSV_STATUTORY_CONFIG, CSV_PAYSLIPS, CSV_FNF
 )
 from services.csv_service import ensure_csv
 
@@ -46,7 +49,7 @@ for _dir in [UPLOAD_FOLDER, GENERATED_FOLDER, FORM16_FOLDER,
 
 ensure_csv(CSV_EMPLOYEES, [
     "employee_id", "name", "email", "department", "designation",
-    "date_of_joining", "pan", "uan", "bank_account", "ifsc", "status",
+    "date_of_joining", "pan", "uan", "bank_account", "ifsc", "status", "state",
 ])
 
 ensure_csv(CSV_DECLARATIONS, [
@@ -69,6 +72,11 @@ ensure_csv(CSV_PAYROLL, [
     "basic_salary", "hra", "special_allowance", "other_allowances",
     "gross_salary", "employee_pf", "professional_tax", "tds", "net_salary",
     "payroll_status", "processed_at",
+    "batch_id", "payable_days", "lop_days", "lop_amount",
+    "overtime_hours", "overtime_amount",
+    "pf_employee", "pf_employer", "esi_employee", "esi_employer",
+    "pt", "lwf", "bonus", "incentives",
+    "earnings_json", "deductions_json", "processed_by"
 ])
 
 ensure_csv(CSV_EMPLOYEE_SALARY, [
@@ -134,11 +142,124 @@ ensure_csv(CSV_DEDUCTOR_MASTER, [
     "contact_email"
 ])
 
+ensure_csv(CSV_CONTRACTS, [
+    "contract_id",
+    "employee_id",
+    "employee_name",
+    "department",
+    "designation",
+    "company",
+    "joining_date",
+    "contract_start_date",
+    "contract_end_date",
+    "salary_structure",
+    "salary_structure_type",
+    "work_schedule",
+    "payroll_frequency",
+    "currency",
+    "basic_salary",
+    "gross_salary",
+    "status",
+    "created_at",
+    "updated_at"
+])
+
+ensure_csv(CSV_SALARY_COMPONENTS, [
+    "component_id", "name", "code", "category", "computation_type",
+    "amount", "percentage", "percentage_of", "formula",
+    "sequence", "taxable", "active", "description", "created_at", "updated_at"
+])
+
+ensure_csv(CSV_SALARY_STRUCTURES, [
+    "structure_id", "name", "structure_type", "payroll_frequency",
+    "description", "active", "created_at", "updated_at"
+])
+
+ensure_csv(CSV_STRUCTURE_COMPONENTS, [
+    "id", "structure_id", "component_id", "override_amount", "override_percentage", "added_at"
+])
+
+ensure_csv(CSV_PAYROLL_BATCHES, [
+    "batch_id", "month", "month_name", "year", "financial_year",
+    "payroll_frequency", "description", "status", "locked",
+    "employee_count", "error_count", "total_gross", "total_deductions",
+    "total_employer_cost", "total_net", "total_tds",
+    "created_by", "created_at", "processed_by", "processed_at",
+    "locked_by", "locked_at", "updated_at"
+])
+
+ensure_csv(CSV_STATUTORY_CONFIG, [
+    "config_id", "rule_type", "state", "enabled", "effective_from", "parameters_json", "created_at", "updated_at"
+])
+
+ensure_csv(CSV_PAYSLIPS, [
+    "payslip_id", "payroll_id", "employee_id", "financial_year", "month",
+    "status", "remarks", "created_by", "created_at",
+    "confirmed_by", "confirmed_at", "paid_by", "paid_at"
+])
+
+ensure_csv(CSV_FNF, [
+    "settlement_id", "employee_id", "last_working_date", "status",
+    "pending_salary", "notice_period_amount", "leave_encashment", "gratuity",
+    "bonus_incentives", "other_recoveries", "total_earnings", "total_deductions",
+    "net_payable", "remarks", "created_by", "created_at",
+    "approved_by", "approved_at", "paid_by", "paid_at"
+])
+
+
+# ─────────────────────────────────────────────────────────────
+# Seed Phase 2: Salary Components & Structures (if empty)
+# ─────────────────────────────────────────────────────────────
+
+import pandas as pd  # noqa: E402 – required here for seeding
+_comp_df = pd.read_csv(CSV_SALARY_COMPONENTS, dtype=str).fillna("")
+if _comp_df.empty:
+    from datetime import datetime as _dt
+
+    _now = _dt.now().isoformat()
+    _components = [
+        {"component_id": "COMP-BASIC",     "name": "Basic Salary",          "code": "BASIC",      "category": "Earning",   "computation_type": "Fixed",      "amount": "0",    "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "10",  "taxable": "Yes", "active": "Yes", "description": "Fixed basic salary",                          "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-HRA",       "name": "House Rent Allowance",  "code": "HRA",        "category": "Earning",   "computation_type": "Percentage", "amount": "",    "percentage": "40",  "percentage_of": "BASIC",  "formula": "", "sequence": "20",  "taxable": "Yes", "active": "Yes", "description": "40% of Basic (metro cities)",                 "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-DA",        "name": "Dearness Allowance",    "code": "DA",         "category": "Earning",   "computation_type": "Fixed",      "amount": "0",    "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "30",  "taxable": "Yes", "active": "Yes", "description": "Dearness allowance",                          "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-SPECIAL",   "name": "Special Allowance",     "code": "SPECIAL",    "category": "Earning",   "computation_type": "Fixed",      "amount": "0",    "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "40",  "taxable": "Yes", "active": "Yes", "description": "Special allowance / balancing component",      "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-CONV",      "name": "Conveyance Allowance",  "code": "CONVEYANCE", "category": "Earning",   "computation_type": "Fixed",      "amount": "1600", "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "50",  "taxable": "No",  "active": "Yes", "description": "Conveyance / transport allowance",            "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-MED",       "name": "Medical Allowance",     "code": "MEDICAL",    "category": "Earning",   "computation_type": "Fixed",      "amount": "1250", "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "60",  "taxable": "No",  "active": "Yes", "description": "Medical reimbursement allowance",             "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-BONUS",     "name": "Performance Bonus",    "code": "BONUS",      "category": "Earning",   "computation_type": "Fixed",      "amount": "0",    "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "70",  "taxable": "Yes", "active": "Yes", "description": "Performance-linked bonus",                    "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-INCENT",    "name": "Incentives",            "code": "INCENTIVE",  "category": "Earning",   "computation_type": "Fixed",      "amount": "0",    "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "80",  "taxable": "Yes", "active": "Yes", "description": "Sales / performance incentives",              "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-PF",        "name": "Provident Fund",        "code": "PF",         "category": "Deduction", "computation_type": "Percentage", "amount": "",    "percentage": "12",  "percentage_of": "BASIC",  "formula": "", "sequence": "110", "taxable": "No",  "active": "Yes", "description": "Employee PF contribution – 12% of Basic",     "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-ESI",       "name": "ESI",                   "code": "ESI",        "category": "Deduction", "computation_type": "Formula",    "amount": "",    "percentage": "",   "percentage_of": "",      "formula": "round(GROSS * 0.0075, 2) if GROSS <= 21000 else 0", "sequence": "120", "taxable": "No",  "active": "Yes", "description": "ESI – 0.75% of gross (only if gross ≤ ₹21,000)","created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-PT",        "name": "Professional Tax",      "code": "PT",         "category": "Deduction", "computation_type": "Fixed",      "amount": "200",  "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "130", "taxable": "No",  "active": "Yes", "description": "State professional tax (flat ₹200/month)",   "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-LWF",       "name": "Labour Welfare Fund",   "code": "LWF",        "category": "Deduction", "computation_type": "Fixed",      "amount": "20",   "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "140", "taxable": "No",  "active": "Yes", "description": "LWF employee contribution",                  "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-LOAN",      "name": "Loan Recovery",         "code": "LOAN",       "category": "Deduction", "computation_type": "Fixed",      "amount": "0",    "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "150", "taxable": "No",  "active": "Yes", "description": "Salary advance / loan recovery",             "created_at": _now, "updated_at": _now},
+        {"component_id": "COMP-TDS",       "name": "TDS (Placeholder)",     "code": "TDS",        "category": "Deduction", "computation_type": "Fixed",      "amount": "0",    "percentage": "",   "percentage_of": "",      "formula": "", "sequence": "160", "taxable": "No",  "active": "Yes", "description": "TDS – computed in payroll phase",            "created_at": _now, "updated_at": _now},
+    ]
+    pd.DataFrame(_components).to_csv(CSV_SALARY_COMPONENTS, index=False)
+
+    _structures = [{
+        "structure_id": "SS-001",
+        "name": "Standard Monthly Structure",
+        "structure_type": "Employee",
+        "payroll_frequency": "Monthly",
+        "description": "Default structure for permanent employees",
+        "active": "Yes",
+        "created_at": _now,
+        "updated_at": _now,
+    }]
+    pd.DataFrame(_structures).to_csv(CSV_SALARY_STRUCTURES, index=False)
+
+    import uuid as _uuid
+    _sc_rows = [
+        {"id": str(_uuid.uuid4()), "structure_id": "SS-001", "component_id": c["component_id"],
+         "override_amount": "", "override_percentage": "", "added_at": _now}
+        for c in _components
+    ]
+    pd.DataFrame(_sc_rows).to_csv(CSV_STRUCTURE_COMPONENTS, index=False)
+
+
 # ─────────────────────────────────────────────────────────────
 # Seed sample employee records (only if employees.csv is empty)
 # ─────────────────────────────────────────────────────────────
 
-import pandas as pd
 
 _emp_df = pd.read_csv(CSV_EMPLOYEES, dtype=str).fillna("")
 if _emp_df.empty:
@@ -195,6 +316,112 @@ if _emp_df.empty:
     ]
     pd.DataFrame(sample_salaries).to_csv(CSV_EMPLOYEE_SALARY, index=False)
 
+# Update state for existing employees if blank
+_emp_df = pd.read_csv(CSV_EMPLOYEES, dtype=str).fillna("")
+if "state" in _emp_df.columns:
+    state_map = {
+        "EMP001": "Maharashtra",
+        "EMP002": "Karnataka",
+        "EMP003": "Delhi",
+        "EMP004": "Tamil Nadu",
+        "EMP005": "Maharashtra",
+        "HR001": "Delhi"
+    }
+    updated = False
+    for idx, row in _emp_df.iterrows():
+        emp_id = row["employee_id"]
+        if row["state"] == "" and emp_id in state_map:
+            _emp_df.at[idx, "state"] = state_map[emp_id]
+            updated = True
+    if updated:
+        _emp_df.to_csv(CSV_EMPLOYEES, index=False)
+
+# Seed Statutory Configurations
+import json
+_stat_df = pd.read_csv(CSV_STATUTORY_CONFIG, dtype=str).fillna("")
+if _stat_df.empty:
+    _now = pd.Timestamp.now().isoformat()
+    _configs = [
+        {
+            "config_id": "STAT-PF", "rule_type": "PF", "state": "All", "enabled": "Yes", "effective_from": "2024-04-01",
+            "parameters_json": json.dumps({
+                "employee_rate": 12.0, "employer_rate": 12.0, "eps_rate": 8.33, "epf_rate": 3.67,
+                "wage_ceiling": 15000.0, "vpf_rate": 0.0, "enable_eps_split": True, "respect_wage_ceiling": True
+            }),
+            "created_at": _now, "updated_at": _now
+        },
+        {
+            "config_id": "STAT-ESI", "rule_type": "ESI", "state": "All", "enabled": "Yes", "effective_from": "2024-04-01",
+            "parameters_json": json.dumps({
+                "employee_rate": 0.75, "employer_rate": 3.25, "wage_ceiling": 21000.0
+            }),
+            "created_at": _now, "updated_at": _now
+        },
+        {
+            "config_id": "STAT-PT-MH", "rule_type": "PT", "state": "Maharashtra", "enabled": "Yes", "effective_from": "2024-04-01",
+            "parameters_json": json.dumps({
+                "slabs": [
+                    {"min": 0, "max": 7500, "amount": 0.0},
+                    {"min": 7500, "max": 10000, "amount": 175.0},
+                    {"min": 10000, "max": 99999999, "amount": 200.0, "feb_amount": 250.0}
+                ]
+            }),
+            "created_at": _now, "updated_at": _now
+        },
+        {
+            "config_id": "STAT-PT-KA", "rule_type": "PT", "state": "Karnataka", "enabled": "Yes", "effective_from": "2024-04-01",
+            "parameters_json": json.dumps({
+                "slabs": [
+                    {"min": 0, "max": 25000, "amount": 0.0},
+                    {"min": 25000, "max": 99999999, "amount": 200.0}
+                ]
+            }),
+            "created_at": _now, "updated_at": _now
+        },
+        {
+            "config_id": "STAT-PT-TN", "rule_type": "PT", "state": "Tamil Nadu", "enabled": "Yes", "effective_from": "2024-04-01",
+            "parameters_json": json.dumps({
+                "slabs": [
+                    {"min": 0, "max": 21000, "amount": 0.0},
+                    {"min": 21000, "max": 30000, "amount": 100.0},
+                    {"min": 30000, "max": 45000, "amount": 150.0},
+                    {"min": 45000, "max": 99999999, "amount": 200.0}
+                ]
+            }),
+            "created_at": _now, "updated_at": _now
+        },
+        {
+            "config_id": "STAT-LWF-MH", "rule_type": "LWF", "state": "Maharashtra", "enabled": "Yes", "effective_from": "2024-04-01",
+            "parameters_json": json.dumps({
+                "employee_contribution": 25.0, "employer_contribution": 75.0, "deduction_months": [6, 12]
+            }),
+            "created_at": _now, "updated_at": _now
+        },
+        {
+            "config_id": "STAT-LWF-KA", "rule_type": "LWF", "state": "Karnataka", "enabled": "Yes", "effective_from": "2024-04-01",
+            "parameters_json": json.dumps({
+                "employee_contribution": 20.0, "employer_contribution": 40.0, "deduction_months": [12]
+            }),
+            "created_at": _now, "updated_at": _now
+        },
+        {
+            "config_id": "STAT-LWF-TN", "rule_type": "LWF", "state": "Tamil Nadu", "enabled": "Yes", "effective_from": "2024-04-01",
+            "parameters_json": json.dumps({
+                "employee_contribution": 10.0, "employer_contribution": 20.0, "deduction_months": [12]
+            }),
+            "created_at": _now, "updated_at": _now
+        },
+        {
+            "config_id": "STAT-LWF-DL", "rule_type": "LWF", "state": "Delhi", "enabled": "Yes", "effective_from": "2024-04-01",
+            "parameters_json": json.dumps({
+                "employee_contribution": 0.75, "employer_contribution": 2.25, "deduction_months": [6, 12]
+            }),
+            "created_at": _now, "updated_at": _now
+        }
+    ]
+    pd.DataFrame(_configs).to_csv(CSV_STATUTORY_CONFIG, index=False)
+
+
 # ─────────────────────────────────────────────────────────────
 # Register blueprints
 # ─────────────────────────────────────────────────────────────
@@ -202,10 +429,35 @@ if _emp_df.empty:
 from routes.employee_routes import employee_bp
 from routes.hr_routes import hr_bp
 from routes.form16_processing_routes import form16_processing_bp
+from routes.contract_routes import contract_bp
+from routes.salary_routes import salary_bp
+from routes.payroll_engine_routes import payroll_engine_bp
+from routes.statutory_routes import statutory_bp
+from routes.payslip_routes import payslips_bp
+from routes.fnf_routes import fnf_bp
+from routes.payroll_reports_routes import reports_bp
+from routes.ess_routes import ess_bp
+from routes.workflow_routes import workflow_bp, notifications_bp
+
+from services.workflow_service import ensure_workflow_csvs
+from services.notification_service import ensure_notifications_csv
+ensure_workflow_csvs()
+ensure_notifications_csv()
 
 app.register_blueprint(employee_bp)
 app.register_blueprint(hr_bp)
 app.register_blueprint(form16_processing_bp)
+app.register_blueprint(contract_bp)
+app.register_blueprint(salary_bp)
+app.register_blueprint(payroll_engine_bp)
+app.register_blueprint(statutory_bp)
+app.register_blueprint(payslips_bp)
+app.register_blueprint(fnf_bp)
+app.register_blueprint(reports_bp)
+app.register_blueprint(ess_bp)
+app.register_blueprint(workflow_bp)
+app.register_blueprint(notifications_bp)
+
 
 # Cleanup stale Form 16 Processing temp sessions on startup
 from services.form16_processing_service import cleanup_stale_sessions

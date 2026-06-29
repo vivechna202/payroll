@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% set is_edit = structure is not none %}
+{% block title %}{{ 'Edit' if is_edit else 'New' }} Salary Structure – TaxPro HRMS{% endblock %}
+{% block page_title %}{{ 'Edit Structure' if is_edit else 'New Salary Structure' }}{% endblock %}
+{% block page_subtitle %}{{ structure.name if is_edit else 'Define a new salary structure' }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs" style="color: var(--text-muted);">
+    <a href="{{ url_for('salary.list_structures') }}" class="hover:underline" style="color:#818cf8;">Salary Structures</a>
+    <span>/</span>
+    <span>{{ 'Edit: ' + structure.name if is_edit else 'New Structure' }}</span>
+  </div>
+
+  <form method="POST" class="space-y-5">
+    <div class="rounded-2xl p-6 space-y-5" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+      <h2 class="text-sm font-bold uppercase tracking-widest" style="color: var(--text-muted);">Structure Details</h2>
+
+      <!-- Name -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">
+          Structure Name <span style="color:#f87171;">*</span>
+        </label>
+        <input type="text" name="name" required
+               value="{{ structure.name if is_edit else '' }}"
+               placeholder="e.g. Standard Monthly Structure"
+               class="w-full px-3 py-2.5 rounded-xl text-sm outline-none focus:ring-2"
+               style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+        <p class="text-xs" style="color: var(--text-muted);">Must be unique. This name appears in contract dropdowns.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Type -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Structure Type</label>
+          <select name="structure_type"
+                  class="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                  style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+            {% for t in ['Employee', 'Worker', 'Intern'] %}
+            <option value="{{ t }}" {% if is_edit and structure.structure_type == t %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Frequency -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Payroll Frequency</label>
+          <select name="payroll_frequency"
+                  class="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                  style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+            {% for f in ['Monthly', 'Weekly', 'Fortnightly'] %}
+            <option value="{{ f }}" {% if is_edit and structure.payroll_frequency == f %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Description</label>
+        <textarea name="description" rows="3"
+                  placeholder="Optional: describe who this structure applies to…"
+                  class="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-y"
+                  style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">{{ structure.description if is_edit else '' }}</textarea>
+      </div>
+
+      {% if is_edit %}
+      <!-- Info callout for edit mode -->
+      <div class="flex items-start gap-3 px-4 py-3 rounded-xl text-xs"
+           style="background-color: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #a5b4fc;">
+        <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span>Editing structure metadata only. To manage components assigned to this structure, use the <a href="{{ url_for('salary.view_structure', structure_id=structure.structure_id) }}" class="underline">Structure Detail</a> page.</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-end gap-3">
+      <a href="{{ url_for('salary.view_structure', structure_id=structure.structure_id) if is_edit else url_for('salary.list_structures') }}"
+         class="px-5 py-2.5 rounded-xl text-sm font-medium"
+         style="border: 1px solid var(--border-color); color: var(--text-secondary);">Cancel</a>
+      <button type="submit"
+              class="px-6 py-2.5 rounded-xl text-sm font-semibold text-white shadow transition-all duration-200 hover:scale-105"
+              style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+        {{ 'Save Changes' if is_edit else 'Create Structure' }}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

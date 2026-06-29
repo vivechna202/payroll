@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="px-6 py-8">
+  <div class="mb-6 flex justify-between items-start">
+    <div>
+      <a href="{{ url_for('payroll_engine.dashboard') }}" class="text-slate-400 hover:text-white text-sm mb-2 inline-block">
+        &larr; Back to Dashboard
+      </a>
+      <h2 class="text-2xl font-bold">Payroll Batch: {{ batch.month_name }} {{ batch.year }}</h2>
+      <p class="text-slate-400 mt-1">ID: <span class="font-mono text-indigo-400">{{ batch.batch_id }}</span> | FY: {{ batch.financial_year }}</p>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      {% if batch.status == 'Draft' %}
+        <span class="px-3 py-1.5 bg-slate-500/20 text-slate-300 rounded-lg text-sm font-medium">Draft</span>
+      {% elif batch.status == 'Ready' %}
+        <span class="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium">Ready</span>
+      {% elif batch.status == 'Processing' %}
+        <span class="px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm font-medium">Processing...</span>
+      {% elif batch.status == 'Done' %}
+        <span class="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-medium">Done</span>
+      {% elif batch.status == 'Locked' %}
+        <span class="px-3 py-1.5 bg-purple-500/20 text-purple-400 rounded-lg text-sm font-medium"><i class="fas fa-lock mr-1"></i> Locked</span>
+      {% elif batch.status == 'Cancelled' %}
+        <span class="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm font-medium">Cancelled</span>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Action Bar -->
+  <div class="card p-4 mb-6 flex flex-wrap gap-3 items-center justify-between">
+    <div class="flex gap-2">
+      {% if batch.status == 'Draft' %}
+        <form method="POST" action="{{ url_for('payroll_engine.validate_batch', batch_id=batch.batch_id) }}" class="inline">
+          <button type="submit" class="btn-primary">Validate Employees</button>
+        </form>
+      {% elif batch.status == 'Ready' or batch.status == 'Done' %}
+        <form method="POST" action="{{ url_for('payroll_engine.run_process_batch', batch_id=batch.batch_id) }}" class="inline">
+          <button type="submit" class="btn-primary">{% if batch.status == 'Done' %}Re-process{% else %}Process Payroll{% endif %}</button>
+        </form>
+      {% endif %}
+      
+      {% if batch.status == 'Done' %}
+        <form method="POST" action="{{ url_for('payroll_engine.run_lock_batch', batch_id=batch.batch_id) }}" class="inline">
+          <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">
+            <i class="fas fa-lock mr-2"></i>Lock Batch
+          </button>
+        </form>
+      {% elif batch.status == 'Locked' %}
+        <form method="POST" action="{{ url_for('payroll_engine.run_unlock_batch', batch_id=batch.batch_id) }}" class="inline">
+          <button type="submit" class="btn-secondary">
+            <i class="fas fa-unlock mr-2"></i>Unlock
+          </button>
+        </form>
+      {% endif %}
+    </div>
+    
+    <div>
+      {% if batch.status in ['Draft', 'Ready'] %}
+        <form method="POST" action="{{ url_for('payroll_engine.run_cancel_batch', batch_id=batch.batch_id) }}" class="inline">
+          <button type="submit" class="text-red-400 hover:text-red-300 text-sm font-medium px-4 py-2" onclick="return confirm('Cancel this batch?')">Cancel Batch</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="card p-4">
+      <h3 class="text-sm font-medium text-slate-400">Total Gross</h3>
+      <p class="text-2xl font-bold mt-1 text-slate-100">₹{{ "{:,.2f}".format(summary.total_gross) }}</p>
+    </div>
+    <div class="card p-4">
+      <h3 class="text-sm font-medium text-slate-400">Total Deductions</h3>
+      <p class="text-2xl font-bold mt-1 text-slate-100">₹{{ "{:,.2f}".format(summary.total_deductions) }}</p>
+    </div>
+    <div class="card p-4">
+      <h3 class="text-sm font-medium text-slate-400">Total TDS</h3>
+      <p class="text-2xl font-bold mt-1 text-slate-100">₹{{ "{:,.2f}".format(summary.total_tds) }}</p>
+    </div>
+    <div class="card p-4">
+      <h3 class="text-sm font-medium text-slate-400">Net Payable</h3>
+      <p class="text-2xl font-bold mt-1 text-emerald-400">₹{{ "{:,.2f}".format(summary.total_net) }}</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center">
+      <h3 class="text-lg font-medium">Employee Entries ({{ summary.employee_count }})</h3>
+      {% if summary.error_count > 0 %}
+        <span class="px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-bold">{{ summary.error_count }} Errors</span>
+      {% endif %}
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-800/50">
+            <th class="px-6 py-3 text-sm font-medium text-slate-300">Employee</th>
+            <th class="px-6 py-3 text-sm font-medium text-slate-300 text-right">Gross</th>
+            <th class="px-6 py-3 text-sm font-medium text-slate-300 text-right">Deductions</th>
+            <th class="px-6 py-3 text-sm font-medium text-slate-300 text-right">TDS</th>
+            <th class="px-6 py-3 text-sm font-medium text-slate-300 text-right">Net Salary</th>
+            <th class="px-6 py-3 text-sm font-medium text-slate-300 text-center">Status</th>
+            <th class="px-6 py-3 text-sm font-medium text-slate-300 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700/50">
+          {% for entry in entries %}
+          <tr class="hover:bg-slate-800/30 transition-colors">
+            <td class="px-6 py-4">
+              <div class="font-medium text-slate-200">{{ entry.employee_name }}</div>
+              <div class="text-xs text-slate-400 font-mono mt-1">{{ entry.employee_id }}</div>
+            </td>
+            <td class="px-6 py-4 text-right">₹{{ "{:,.2f}".format(entry.gross_salary|float) }}</td>
+            <td class="px-6 py-4 text-right">₹{{ "{:,.2f}".format((entry.gross_salary|float) - (entry.net_salary|float)) }}</td>
+            <td class="px-6 py-4 text-right">₹{{ "{:,.2f}".format(entry.tds|float) }}</td>
+            <td class="px-6 py-4 text-right font-medium text-emerald-400">₹{{ "{:,.2f}".format(entry.net_salary|float) }}</td>
+            <td class="px-6 py-4 text-center">
+              {% if entry.payroll_status == 'PROCESSED' %}
+                <span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs"><i class="fas fa-check mr-1"></i> Ok</span>
+              {% elif entry.payroll_status == 'Error' %}
+                <span class="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs"><i class="fas fa-times mr-1"></i> Error</span>
+              {% else %}
+                <span class="px-2 py-1 bg-slate-500/20 text-slate-400 rounded text-xs">{{ entry.payroll_status }}</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-right">
+              <a href="{{ url_for('payroll_engine.entry_detail', batch_id=batch.batch_id, payroll_id=entry.payroll_id) }}" class="text-indigo-400 hover:text-indigo-300 text-sm font-medium">Details</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="px-6 py-8 text-center text-slate-400">
+              {% if batch.status in ['Draft', 'Ready'] %}
+                No entries generated yet. Process payroll to compute salaries.
+              {% else %}
+                No entries found.
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -11,6 +11,7 @@ Pages:
 
 from flask import Blueprint, render_template, session, redirect, url_for, flash, request
 from functools import wraps
+import io
 from datetime import date
 from config import CSV_DECLARATION_WINDOWS, CSV_EMPLOYEES, CURRENT_FY
 from services.csv_service import csv_to_records, append_row, get_all_declarations
@@ -18,6 +19,8 @@ from services.payroll_service import get_all_payroll_records, process_monthly_pa
 from services.tax_service import get_monthly_tds_records, compute_tds_for_month
 from services.proof_service import get_all_proofs, get_all_pending_proofs, approve_proof, reject_proof
 from services.form24q_service import get_quarterly_summary, get_form24q_files, generate_form24q, get_quarterly_employee_details, get_fvu_path, save_fvu_path, run_fvu_validation
+from services.payroll_register_service import get_payroll_register_data, get_register_dashboard_stats, export_to_excel, export_to_csv, get_unique_departments
+from flask import send_file, Response
 
 hr_bp = Blueprint("hr", __name__, url_prefix="/hr")
 
@@ -109,33 +112,64 @@ def payroll_edit(employee_id):
 @hr_required
 def payroll_register():
     user = session["user"]
-    all_payrolls = get_all_payroll_records()
     
-    month_filter = request.args.get("month", "")
-    fy_filter = request.args.get("fy", "")
-    emp_filter = request.args.get("employee_id", "").strip().lower()
+    filters = {
+        "month": request.args.get("month", ""),
+        "fy": request.args.get("fy", CURRENT_FY),
+        "employee_id": request.args.get("employee_id", "").strip(),
+        "department": request.args.get("department", ""),
+        "batch_id": request.args.get("batch_id", ""),
+        "payroll_status": request.args.get("payroll_status", "")
+    }
     
-    filtered_payrolls = []
-    for p in all_payrolls:
-        if month_filter and p.get("month") != month_filter:
-            continue
-        if fy_filter and p.get("financial_year") != fy_filter:
-            continue
-        if emp_filter and emp_filter not in p.get("employee_id", "").lower():
-            continue
-        filtered_payrolls.append(p)
+    data = get_payroll_register_data(filters)
+    stats = get_register_dashboard_stats(data)
+    departments = get_unique_departments()
         
     return render_template(
         "hr/payroll_register.html",
         user=user,
-        payrolls=filtered_payrolls,
+        payrolls=data,
+        stats=stats,
+        filters=filters,
+        departments=departments,
         fy=CURRENT_FY,
-        month_filter=month_filter,
-        fy_filter=fy_filter,
-        emp_filter=emp_filter,
         active_page="payroll_register",
     )
 
+@hr_bp.route("/payroll-register/export/<format>")
+@hr_required
+def payroll_register_export(format):
+    filters = {
+        "month": request.args.get("month", ""),
+        "fy": request.args.get("fy", CURRENT_FY),
+        "employee_id": request.args.get("employee_id", "").strip(),
+        "department": request.args.get("department", ""),
+        "batch_id": request.args.get("batch_id", ""),
+        "payroll_status": request.args.get("payroll_status", "")
+    }
+    
+    data = get_payroll_register_data(filters)
+    
+    if format == "excel":
+        excel_bytes = export_to_excel(data)
+        return send_file(
+            io.BytesIO(excel_bytes),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=f"Payroll_Register_{filters['fy']}.xlsx"
+        )
+    elif format == "csv":
+        csv_bytes = export_to_csv(data)
+        return send_file(
+            io.BytesIO(csv_bytes),
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=f"Payroll_Register_{filters['fy']}.csv"
+        )
+        
+    flash("Invalid export format.", "danger")
+    return redirect(url_for("hr.payroll_register"))
 
 @hr_bp.route("/monthly-tds", methods=["GET", "POST"])
 @hr_required

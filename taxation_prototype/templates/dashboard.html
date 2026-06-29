@@ -149,8 +149,12 @@
         <tbody style="border-top: 1px solid var(--border-color);">
           {% for emp in employees %}
           <tr class="transition-colors" style="border-bottom: 1px solid var(--border-color);" onmouseover="this.style.backgroundColor='var(--hover-bg)'" onmouseout="this.style.backgroundColor='transparent'">
-            <td class="td-cell font-mono text-xs" style="color: var(--badge-info-text);">{{ emp.employee_id }}</td>
-            <td class="td-cell font-medium" style="color: var(--text-primary);">{{ emp.name }}</td>
+            <td class="td-cell font-mono text-xs" style="color: var(--badge-info-text);">
+              <a href="{{ url_for('employee.profile', employee_id=emp.employee_id) }}" class="hover:underline">{{ emp.employee_id }}</a>
+            </td>
+            <td class="td-cell font-medium" style="color: var(--text-primary);">
+              <a href="{{ url_for('employee.profile', employee_id=emp.employee_id) }}" class="hover:underline">{{ emp.name }}</a>
+            </td>
             <td class="td-cell" style="color: var(--text-secondary);">{{ emp.department }}</td>
             <td class="td-cell text-xs" style="color: var(--text-muted);">{{ emp.designation }}</td>
             <td class="td-cell">

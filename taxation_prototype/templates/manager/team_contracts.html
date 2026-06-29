@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Team Contracts – MSS Portal{% endblock %}
+{% block page_title %}Team Contract Timeline{% endblock %}
+{% block page_subtitle %}Contracts timeline and status for direct reports{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('ess.team_dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Employee</th>
+                        <th>Contract Reference</th>
+                        <th>Salary Structure</th>
+                        <th class="text-end">Gross Monthly</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th class="text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    {% for m in team %}
+                    {% if m.active_contract %}
+                    {% set c = m.active_contract %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ m.name }}</div>
+                            <small class="text-muted font-monospace">{{ m.employee_id }}</small>
+                        </td>
+                        <td class="font-monospace text-primary fw-bold">{{ c.contract_id }}</td>
+                        <td>{{ c.salary_structure_type }}</td>
+                        <td class="text-end">₹{{ "{:,.2f}".format(c.gross_salary|float) }}</td>
+                        <td>{{ c.start_date }}</td>
+                        <td>{{ c.end_date or 'Permanent' }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if c.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ c.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ m.name }}</div>
+                            <small class="text-muted font-monospace">{{ m.employee_id }}</small>
+                        </td>
+                        <td colspan="5" class="text-muted small italic">No active contracts mapped for this team member.</td>
+                        <td class="text-center"><span class="badge bg-secondary">No Contract</span></td>
+                    </tr>
+                    {% endif %}
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">No team members assigned.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

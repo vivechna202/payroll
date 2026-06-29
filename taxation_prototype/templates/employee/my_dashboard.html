@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}My Dashboard – ESS Portal{% endblock %}
+{% block page_title %}Employee Self Service{% endblock %}
+{% block page_subtitle %}Welcome back, {{ user.name }}!{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Current Salary -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100 shadow-sm border-0 bg-primary text-white">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-white-50 text-uppercase small font-bold">Monthly Gross Salary</h6>
+                    <h3 class="mt-2 mb-0">₹{{ "{:,.2f}".format(metrics.gross_salary) }}</h3>
+                </div>
+                <div class="mt-3 small text-white-50">
+                    <a href="{{ url_for('ess.my_salary_structure') }}" class="text-white text-decoration-none fw-bold">View Structure <i class="bi bi-chevron-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Latest Payslip -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100 shadow-sm border-0 bg-success text-white">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-white-50 text-uppercase small font-bold">Latest Net Payout</h6>
+                    <h3 class="mt-2 mb-0">₹{{ "{:,.2f}".format(metrics.latest_payslip_amount) }}</h3>
+                </div>
+                <div class="mt-3 small text-white-50">
+                    {% if metrics.latest_payslip_id != 'N/A' %}
+                    <a href="{{ url_for('employee.view_payslip', payslip_id=metrics.latest_payslip_id) }}" class="text-white text-decoration-none fw-bold">View Payslip <i class="bi bi-chevron-right"></i></a>
+                    {% else %}
+                    <span class="text-white-50 font-bold">No payslip generated</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Contract -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100 shadow-sm border-0 bg-dark text-white">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-white-50 text-uppercase small font-bold">Active Contract</h6>
+                    <h4 class="mt-2 mb-0 font-monospace text-brand-400">{{ metrics.contract_id }}</h4>
+                </div>
+                <div class="mt-3 small text-white-50">
+                    <a href="{{ url_for('ess.my_contracts') }}" class="text-white text-decoration-none fw-bold">View Timeline <i class="bi bi-chevron-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tax Regime -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100 shadow-sm border-0 bg-secondary text-white">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-white-50 text-uppercase small font-bold">Tax Regime</h6>
+                    <h3 class="mt-2 mb-0">{{ metrics.tax_regime }} Regime</h3>
+                </div>
+                <div class="mt-3 small text-white-50">
+                    <a href="{{ url_for('employee.tax_dashboard') }}" class="text-white text-decoration-none fw-bold">Tax Planner <i class="bi bi-chevron-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Notifications & Documents -->
+    <div class="col-md-8">
+        <!-- Notifications -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white pt-4 pb-0 border-bottom-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">Recent Notifications</h5>
+                <a href="{{ url_for('ess.my_notifications') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if notifications %}
+                <div class="list-group list-group-flush">
+                    {% for n in notifications[:3] %}
+                    <div class="list-group-item px-0 py-3 d-flex align-items-start gap-3 border-0 border-bottom border-light">
+                        <span class="badge rounded-pill bg-{{ n.type }} px-2 py-2 mt-1">
+                            <i class="bi {% if n.type == 'warning' %}bi-exclamation-triangle{% elif n.type == 'success' %}bi-check-circle{% else %}bi-info-circle{% endif %}"></i>
+                        </span>
+                        <div class="flex-grow-1">
+                            <p class="mb-1 text-dark">{{ n.message }}</p>
+                            <small class="text-muted">{{ n.date }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4 my-0">No new notifications.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Action Cards -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white pt-4 pb-0 border-bottom-0">
+                <h5 class="fw-bold mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a href="{{ url_for('employee.investment_declaration') }}" class="text-decoration-none">
+                          <div class="card bg-light border-0 shadow-sm hover-grow h-100 text-center py-4">
+                            <div class="card-body">
+                                <i class="bi bi-file-earmark-plus fs-2 text-primary mb-2 d-block"></i>
+                                <span class="fw-semibold text-dark small d-block">Declaration</span>
+                            </div>
+                          </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ url_for('employee.proof_upload') }}" class="text-decoration-none">
+                          <div class="card bg-light border-0 shadow-sm hover-grow h-100 text-center py-4">
+                            <div class="card-body">
+                                <i class="bi bi-upload fs-2 text-success mb-2 d-block"></i>
+                                <span class="fw-semibold text-dark small d-block">Upload Proofs</span>
+                            </div>
+                          </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ url_for('employee.form16_download') }}" class="text-decoration-none">
+                          <div class="card bg-light border-0 shadow-sm hover-grow h-100 text-center py-4">
+                            <div class="card-body">
+                                <i class="bi bi-file-earmark-pdf fs-2 text-danger mb-2 d-block"></i>
+                                <span class="fw-semibold text-dark small d-block">Form 16</span>
+                            </div>
+                          </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column: Recent Payslips -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white pt-4 pb-0 border-bottom-0">
+                <h5 class="fw-bold mb-0">Recent Payslips</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_payslips %}
+                <div class="list-group list-group-flush">
+                    {% for p in recent_payslips %}
+                    <div class="list-group-item px-0 py-3 border-0 border-bottom border-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold text-dark">{{ p.month }}/{{ p.financial_year }}</div>
+                            <small class="text-muted">Net: ₹{{ "{:,.2f}".format(p.net_salary|float) }}</small>
+                        </div>
+                        <a href="{{ url_for('employee.view_payslip', payslip_id=p.payslip_id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-5 my-0">No payslips available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

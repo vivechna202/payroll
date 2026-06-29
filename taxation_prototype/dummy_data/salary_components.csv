@@ -1,0 +1,15 @@
+component_id,name,code,category,computation_type,amount,percentage,percentage_of,formula,sequence,taxable,active,description,created_at,updated_at
+COMP-BASIC,Basic Salary,BASIC,Earning,Fixed,0,,,,10,Yes,Yes,Fixed basic salary,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-HRA,House Rent Allowance,HRA,Earning,Percentage,,40,BASIC,,20,Yes,Yes,40% of Basic (metro cities),2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-DA,Dearness Allowance,DA,Earning,Fixed,0,,,,30,Yes,Yes,Dearness allowance,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-SPECIAL,Special Allowance,SPECIAL,Earning,Fixed,0,,,,40,Yes,Yes,Special allowance / balancing component,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-CONV,Conveyance Allowance,CONVEYANCE,Earning,Fixed,1600,,,,50,No,Yes,Conveyance / transport allowance,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-MED,Medical Allowance,MEDICAL,Earning,Fixed,1250,,,,60,No,Yes,Medical reimbursement allowance,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-BONUS,Performance Bonus,BONUS,Earning,Fixed,0,,,,70,Yes,Yes,Performance-linked bonus,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-INCENT,Incentives,INCENTIVE,Earning,Fixed,0,,,,80,Yes,Yes,Sales / performance incentives,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-PF,Provident Fund,PF,Deduction,Percentage,,12,BASIC,,110,No,Yes,Employee PF contribution – 12% of Basic,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-ESI,ESI,ESI,Deduction,Formula,,,,"round(GROSS * 0.0075, 2) if GROSS <= 21000 else 0",120,No,Yes,"ESI – 0.75% of gross (only if gross ≤ ₹21,000)",2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-PT,Professional Tax,PT,Deduction,Fixed,200,,,,130,No,Yes,State professional tax (flat ₹200/month),2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-LWF,Labour Welfare Fund,LWF,Deduction,Fixed,20,,,,140,No,Yes,LWF employee contribution,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-LOAN,Loan Recovery,LOAN,Deduction,Fixed,0,,,,150,No,Yes,Salary advance / loan recovery,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+COMP-TDS,TDS (Placeholder),TDS,Deduction,Fixed,0,,,,160,No,Yes,TDS – computed in payroll phase,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162

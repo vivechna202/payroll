@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}My Notifications – TaxPro HRMS{% endblock %}
+{% block page_title %}Notifications Center{% endblock %}
+{% block page_subtitle %}All system logs, reminders and approval updates{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+    </div>
+    
+    {% if notifications %}
+    <form method="POST" action="{{ url_for('notifications.mark_all_read_route') }}">
+        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-check2-all"></i> Mark All as Read</button>
+    </form>
+    {% endif %}
+</div>
+
+<!-- Notifications list card -->
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        {% if notifications %}
+        <div class="list-group list-group-flush" id="notifications-list">
+            {% for n in notifications %}
+            <div class="list-group-item px-0 py-3 d-flex align-items-start gap-3 border-0 border-bottom border-light notification-item {% if n.is_read == 'False' %}bg-light-yellow{% endif %}" 
+                 id="notif-{{ n.notification_id }}">
+                
+                <!-- Icon badge -->
+                <span class="badge rounded-pill bg-{% if n.type == 'Success' %}success{% elif n.type == 'Warning' %}danger{% elif n.type == 'Reminder' %}warning text-dark{% else %}info{% endif %} px-2 py-2 mt-1">
+                    <i class="bi 
+                        {% if n.type == 'Success' %}bi-check-circle
+                        {% elif n.type == 'Warning' %}bi-exclamation-triangle
+                        {% elif n.type == 'Reminder' %}bi-bell
+                        {% else %}bi-info-circle{% endif %}">
+                    </i>
+                </span>
+                
+                <!-- Message content -->
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <p class="mb-1 text-dark fw-semibold">{{ n.message }}</p>
+                        <small class="text-muted font-monospace">{{ n.timestamp[:10] }} {{ n.timestamp[11:16] }}</small>
+                    </div>
+                    
+                    <div class="d-flex gap-3 align-items-center mt-2">
+                        {% if n.link %}
+                        <a href="{{ n.link }}" class="btn btn-xs btn-primary py-1 px-2 text-white text-decoration-none small">View Request</a>
+                        {% endif %}
+                        
+                        {% if n.is_read == 'False' %}
+                        <button onclick="readNotification('{{ n.notification_id }}')" class="btn btn-xs btn-outline-secondary py-0 px-2 small mark-read-btn">Mark as Read</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-bell-slash fs-1 text-muted opacity-25 d-block mb-3"></i>
+            <p class="text-muted mb-0">No notifications found.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function readNotification(nid) {
+    fetch(`/employee/notifications/read/${nid}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const item = document.getElementById(`notif-${nid}`);
+            if (item) {
+                item.classList.remove('bg-light-yellow');
+                const btn = item.querySelector('.mark-read-btn');
+                if (btn) btn.remove();
+            }
+            // Update badge dynamically
+            const badge = document.querySelector('.notification-badge');
+            if (badge) {
+                let count = parseInt(badge.innerText) || 0;
+                if (count > 0) {
+                    count--;
+                    badge.innerText = count;
+                    if (count === 0) badge.remove();
+                }
+            }
+        }
+    })
+    .catch(err => console.error("Error reading notification:", err));
+}
+</script>
+
+<style>
+.bg-light-yellow {
+    background-color: rgba(255, 193, 7, 0.05) !important;
+}
+.btn-xs {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.4rem;
+}
+</style>
+{% endblock %}

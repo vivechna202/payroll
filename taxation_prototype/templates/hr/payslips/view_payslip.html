@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block page_title %}Payslip - {{ payslip.payslip_id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <div>
+        <a href="{{ request.referrer or url_for('payslips.dashboard') }}" class="btn btn-secondary me-2">Back</a>
+        <button onclick="window.print()" class="btn btn-primary"><i class="bi bi-printer"></i> Print</button>
+        <a href="{{ url_for('payslips.download_payslip', payslip_id=payslip.payslip_id) }}" class="btn btn-outline-primary"><i class="bi bi-download"></i> Download PDF</a>
+    </div>
+    <div>
+        {% if payslip.status == 'Draft' %}
+        <form action="{{ url_for('payslips.update_status', payslip_id=payslip.payslip_id) }}" method="POST" class="d-inline">
+            <input type="hidden" name="status" value="Confirmed">
+            <button type="submit" class="btn btn-warning">Confirm Payslip</button>
+        </form>
+        {% elif payslip.status == 'Confirmed' %}
+        <form action="{{ url_for('payslips.update_status', payslip_id=payslip.payslip_id) }}" method="POST" class="d-inline">
+            <input type="hidden" name="status" value="Paid">
+            <button type="submit" class="btn btn-success">Mark as Paid</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{% include 'components/payslip_document.html' %}
+{% endblock %}
