@@ -232,11 +232,16 @@ def get_payslips_by_batch(batch_id: str) -> list[dict]:
     if ps_df.empty:
         return []
         
-    merged = pd.merge(pay_df, ps_df, on="payroll_id", how="inner")
+    merged = pd.merge(pay_df, ps_df, on="employee_id", how="inner")
     
     emp_df = read_csv(CSV_EMPLOYEES)
     if not emp_df.empty:
-        merged = pd.merge(merged, emp_df[["employee_id", "name"]], on="employee_id", how="left")
+        merged = pd.merge(
+        merged.reset_index() if "employee_id" not in merged.columns else merged,
+        emp_df[["employee_id", "name"]],
+        on="employee_id",
+        how="left"
+    ) 
         
     return merged.to_dict(orient="records")
 

@@ -1,2 +1,4 @@
 structure_id,name,structure_type,payroll_frequency,description,active,created_at,updated_at
 SS-001,Standard Monthly Structure,Employee,Monthly,Default structure for permanent employees,Yes,2026-06-28T22:35:06.200162,2026-06-28T22:35:06.200162
+SS-01ED01,Testing structure,Worker,Monthly,The structure is build for the testing purpose,Yes,2026-06-29T13:39:11.401850,2026-06-29T13:41:25.287213
+SS-D48A57,structure1,Worker,Monthly,presenting the structure formation,Yes,2026-06-29T18:06:53.588117,2026-06-29T18:07:19.822414

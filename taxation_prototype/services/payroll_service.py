@@ -484,8 +484,8 @@ def process_batch(batch_id: str, user: str) -> dict:
     summary = get_batch_summary(batch_id)
     
     extra = {
-        "employee_count": summary["employee_count"],
-        "error_count": summary["error_count"],
+        "employee_count": str(summary["employee_count"]),
+        "error_count": str(summary["error_count"]),
         "total_gross": f"{summary['total_gross']:.2f}",
         "total_deductions": f"{summary['total_deductions']:.2f}",
         "total_tds": f"{summary['total_tds']:.2f}",

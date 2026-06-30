@@ -2,31 +2,39 @@
 
 {% block title %}{{ title }} – TaxPro HRMS{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
-{% block page_subtitle %}Statutory contribution report – read-only{% endblock %}
+{% block page_subtitle %}Statutory compliance and deduction statements (Read-only){% endblock %}
 
 {% block content %}
-<!-- Back + Tab Nav -->
-<div class="mb-3 d-flex flex-wrap gap-2">
-  <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+<!-- Tab Navigation & Dashboard Back Link -->
+<div class="flex flex-wrap gap-2 items-center mb-6">
+  <a href="{{ url_for('reports.dashboard') }}" class="btn-secondary">
+    <i class="bi bi-arrow-left"></i> Dashboard
+  </a>
+  <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
   {% for comp, label in [('pf','PF'), ('esi','ESI'), ('pt','PT'), ('lwf','LWF'), ('tds','TDS')] %}
   <a href="{{ url_for('reports.statutory_report', component=comp) }}"
-     class="btn btn-sm {% if component == comp %}btn-danger text-white{% else %}btn-outline-danger{% endif %}">
+     class="px-4 py-2 text-xs font-semibold rounded-lg border transition-all duration-200 text-decoration-none
+     {% if component == comp %}
+     bg-brand-600 border-brand-600 text-white shadow-sm
+     {% else %}
+     bg-transparent border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800
+     {% endif %}">
     {{ label }}
   </a>
   {% endfor %}
 </div>
 
-<!-- Filter Bar -->
-<div class="card mb-3 border-0 shadow-sm">
-  <div class="card-body py-3">
-    <form method="GET" action="{{ url_for('reports.statutory_report', component=component) }}" class="row g-2 align-items-end">
-      <div class="col-md-2">
-        <label class="form-label text-muted small fw-bold mb-1">Financial Year</label>
-        <input type="text" name="fy" class="form-control form-control-sm" value="{{ filters.fy }}">
+<!-- Filter Control Bar -->
+<div class="card border-0 shadow-sm mb-6">
+  <div class="card-body p-4">
+    <form method="GET" action="{{ url_for('reports.statutory_report', component=component) }}" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+      <div>
+        <label class="form-label">Financial Year</label>
+        <input type="text" name="fy" class="form-input" value="{{ filters.fy }}">
       </div>
-      <div class="col-md-2">
-        <label class="form-label text-muted small fw-bold mb-1">Month</label>
-        <select name="month" class="form-select form-select-sm">
+      <div>
+        <label class="form-label">Month</label>
+        <select name="month" class="form-input">
           <option value="">All Months</option>
           {% set mnames=['January','February','March','April','May','June','July','August','September','October','November','December'] %}
           {% for i in range(1,13) %}
@@ -34,114 +42,124 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-2">
-        <label class="form-label text-muted small fw-bold mb-1">Department</label>
-        <select name="department" class="form-select form-select-sm">
-          <option value="">All</option>
+      <div>
+        <label class="form-label">Department</label>
+        <select name="department" class="form-input">
+          <option value="">All Departments</option>
           {% for d in departments %}
           <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-2">
-        <label class="form-label text-muted small fw-bold mb-1">Employee ID</label>
-        <input type="text" name="employee_id" class="form-control form-control-sm" value="{{ filters.employee_id }}" placeholder="e.g. EMP001">
+      <div>
+        <label class="form-label">Employee ID</label>
+        <input type="text" name="employee_id" class="form-input" value="{{ filters.employee_id }}" placeholder="e.g. EMP001">
       </div>
-      <div class="col-md-2 d-flex gap-1 align-items-end">
-        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Filter</button>
-        <a href="{{ url_for('reports.statutory_report', component=component) }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+      <div class="flex gap-2">
+        <button type="submit" class="btn-primary w-full justify-center">Filter</button>
+        <a href="{{ url_for('reports.statutory_report', component=component) }}" class="btn-secondary justify-center w-full">Reset</a>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Export Bar -->
-<div class="d-flex justify-content-end gap-2 mb-3">
-  <button onclick="exportReport('excel')" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
-  <button onclick="exportReport('csv')" class="btn btn-secondary btn-sm"><i class="bi bi-filetype-csv"></i> Export CSV</button>
-  <button onclick="window.print()" class="btn btn-outline-dark btn-sm"><i class="bi bi-printer"></i> Print / PDF</button>
+<!-- Export Controls Toolbar -->
+<div class="flex justify-between items-center mb-4">
+  <h5 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Compliance Records</h5>
+  <div class="flex gap-2">
+    <button onclick="exportReport('excel')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50 flex items-center gap-1.5">
+      <i class="bi bi-file-earmark-excel"></i> Excel
+    </button>
+    <button onclick="exportReport('csv')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 flex items-center gap-1.5">
+      <i class="bi bi-filetype-csv"></i> CSV
+    </button>
+    <button onclick="window.print()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-transparent text-slate-700 border border-slate-200 hover:bg-slate-50 dark:text-slate-300 dark:border-slate-800 flex items-center gap-1.5">
+      <i class="bi bi-printer"></i> Print / PDF
+    </button>
+  </div>
 </div>
 
-<!-- Summary Card -->
+<!-- Summary Analytics Cards -->
 {% if rows %}
 {% set emp_col_keys = {'pf': 'employee_pf', 'esi': 'esi_employee', 'pt': 'professional_tax', 'lwf': 'lwf', 'tds': 'tds'} %}
 {% set emp_col = emp_col_keys.get(component, component) %}
 {% set er_col_keys = {'pf': 'pf_employer', 'esi': 'esi_employer'} %}
 {% set er_col = er_col_keys.get(component, '') %}
-<div class="row g-3 mb-3">
-  <div class="col-md-4">
-    <div class="card border-0 bg-danger text-white shadow-sm">
-      <div class="card-body text-center">
-        <div class="small text-white-50 text-uppercase fw-bold">Total Employee Contribution</div>
-        <div class="fs-4 fw-bold">₹{{ "{:,.2f}".format(rows | map(attribute=emp_col, default=0) | map('float') | sum) }}</div>
-      </div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="stat-card">
+    <div class="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-1">Employee Contribution</div>
+    <div class="text-2xl font-bold text-slate-900 dark:text-white">
+      ₹{{ "{:,.2f}".format(rows | map(attribute=emp_col, default=0) | map('float') | sum) }}
     </div>
+    <div class="text-[10px] text-slate-500 mt-1">Deducted from gross salary</div>
   </div>
+  
   {% if er_col %}
-  <div class="col-md-4">
-    <div class="card border-0 bg-warning text-dark shadow-sm">
-      <div class="card-body text-center">
-        <div class="small text-dark opacity-75 text-uppercase fw-bold">Total Employer Contribution</div>
-        <div class="fs-4 fw-bold">₹{{ "{:,.2f}".format(rows | map(attribute=er_col, default=0) | map('float') | sum) }}</div>
-      </div>
+  <div class="stat-card">
+    <div class="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-1">Employer Contribution</div>
+    <div class="text-2xl font-bold text-slate-900 dark:text-white">
+      ₹{{ "{:,.2f}".format(rows | map(attribute=er_col, default=0) | map('float') | sum) }}
     </div>
+    <div class="text-[10px] text-slate-500 mt-1">Company contribution share</div>
   </div>
   {% endif %}
-  <div class="col-md-4">
-    <div class="card border-0 bg-light shadow-sm">
-      <div class="card-body text-center">
-        <div class="small text-muted text-uppercase fw-bold">Employee Records</div>
-        <div class="fs-4 fw-bold text-dark">{{ rows|length }}</div>
-      </div>
+  
+  <div class="stat-card">
+    <div class="text-xs font-semibold text-brand-500 uppercase tracking-wider mb-1">Active Filings</div>
+    <div class="text-2xl font-bold text-slate-900 dark:text-white">
+      {{ rows|length }}
     </div>
+    <div class="text-[10px] text-slate-500 mt-1">Total matching records</div>
   </div>
 </div>
 {% endif %}
 
-<!-- Data Table -->
-<div class="card border-0 shadow-sm">
-  <div class="card-body p-0">
-    <div class="table-responsive" style="max-height:580px;">
-      <table class="table table-hover table-sm align-middle mb-0" style="font-size:.85rem; white-space:nowrap;">
-        <thead class="bg-light sticky-top">
-          <tr>
-            <th>Emp ID</th>
-            <th>Name</th>
-            <th>Department</th>
-            <th>Month</th>
-            <th>FY</th>
-            <th class="text-end">Employee Contribution</th>
-            {% if component in ['pf', 'esi'] %}
-            <th class="text-end">Employer Contribution</th>
-            <th class="text-end">Total</th>
-            {% endif %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          {% set emp_val = r.get(emp_col, 0)|float %}
-          {% set er_val = r.get(er_col, 0)|float if er_col else 0 %}
-          <tr>
-            <td class="font-monospace text-primary">{{ r.employee_id }}</td>
-            <td>{{ r.get('name', '') }}</td>
-            <td>{{ r.get('department', '') }}</td>
-            <td>{{ r.get('month', '') }}</td>
-            <td>{{ r.get('financial_year', '') }}</td>
-            <td class="text-end fw-semibold text-danger">₹{{ "{:,.2f}".format(emp_val) }}</td>
-            {% if component in ['pf', 'esi'] %}
-            <td class="text-end fw-semibold text-warning">₹{{ "{:,.2f}".format(er_val) }}</td>
-            <td class="text-end fw-bold">₹{{ "{:,.2f}".format(emp_val + er_val) }}</td>
-            {% endif %}
-          </tr>
-          {% else %}
-          <tr><td colspan="8" class="text-center text-muted py-5">No records found for selected filters.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+<!-- Premium Data Table -->
+<div class="card p-0 border-0 shadow-sm overflow-hidden">
+  <div class="overflow-x-auto max-h-[580px]">
+    <table class="w-full border-collapse text-left">
+      <thead class="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
+        <tr>
+          <th class="th-cell">Emp ID</th>
+          <th class="th-cell">Employee Name</th>
+          <th class="th-cell">Department</th>
+          <th class="th-cell text-center">Period</th>
+          <th class="th-cell text-end">Employee Share</th>
+          {% if component in ['pf', 'esi'] %}
+          <th class="th-cell text-end">Employer Share</th>
+          <th class="th-cell text-end">Total Amount</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        {% for r in rows %}
+        {% set emp_val = r.get(emp_col, 0)|float %}
+        {% set er_val = r.get(er_col, 0)|float if er_col else 0 %}
+        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+          <td class="td-cell font-monospace text-brand-600 dark:text-brand-400 font-semibold">{{ r.employee_id }}</td>
+          <td class="td-cell font-medium">{{ r.get('name', '') }}</td>
+          <td class="td-cell text-slate-500">{{ r.get('department', '') }}</td>
+          <td class="td-cell text-center text-slate-500">{{ r.get('month', '') }} / {{ r.get('financial_year', '') }}</td>
+          <td class="td-cell text-end font-semibold text-rose-600 dark:text-rose-400">₹{{ "{:,.2f}".format(emp_val) }}</td>
+          {% if component in ['pf', 'esi'] %}
+          <td class="td-cell text-end font-semibold text-amber-600 dark:text-amber-400">₹{{ "{:,.2f}".format(er_val) }}</td>
+          <td class="td-cell text-end font-bold text-slate-900 dark:text-white">₹{{ "{:,.2f}".format(emp_val + er_val) }}</td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center py-12 text-slate-400 dark:text-slate-600">
+            <i class="bi bi-inbox fs-2 mb-2 d-block"></i>
+            No compliance records found for selected filters.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
-<div class="text-muted small mt-2 text-end">{{ rows|length }} record(s).</div>
+<div class="text-muted small mt-2 text-end">{{ rows|length }} record(s) found.</div>
 
 <script>
 function exportReport(fmt) {
@@ -154,7 +172,7 @@ function exportReport(fmt) {
 </script>
 <style>
 @media print {
-  nav, header, .mb-3, .d-flex.justify-content-end { display: none !important; }
+  nav, header, .mb-6, .mb-4, .flex.justify-between, .btn-secondary, .text-muted { display: none !important; }
   .table-responsive { max-height: none !important; overflow: visible !important; }
   .table { font-size: 0.7rem !important; }
 }
