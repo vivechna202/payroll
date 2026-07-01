@@ -2,41 +2,207 @@
 
 {% block page_title %}My Payslips{% endblock %}
 
+{% block head_extra %}
+<style>
+    /* ── My Payslips – Theme-aware styles ──────────────────────── */
+
+    /* Container Card */
+    .mps-card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* Data Table */
+    .mps-table-wrapper {
+        overflow-x: auto;
+    }
+    .mps-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .mps-thead {
+        background-color: var(--bg-surface);
+        border-bottom: 1px solid var(--border-color);
+    }
+    .mps-th {
+        padding: 1rem 1.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b; /* text-slate-500 */
+        text-align: left;
+        white-space: nowrap;
+    }
+    [data-theme="dark"] .mps-th { color: #94a3b8; }
+
+    .mps-tbody tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.15s;
+    }
+    .mps-tbody tr:last-child {
+        border-bottom: none;
+    }
+    .mps-tbody tr:hover {
+        background-color: var(--hover-bg);
+    }
+
+    .mps-td {
+        padding: 1.25rem 1.5rem;
+        vertical-align: middle;
+    }
+
+    /* Typography */
+    .mps-text-primary {
+        color: #0f172a; /* text-slate-900 */
+        font-weight: 700;
+    }
+    [data-theme="dark"] .mps-text-primary { color: #f1f5f9; /* text-slate-100 */ }
+
+    .mps-text-mono {
+        font-family: ui-monospace, 'Cascadia Code', monospace;
+        font-size: 0.875rem;
+        color: #475569; /* text-slate-600 */
+    }
+    [data-theme="dark"] .mps-text-mono { color: #cbd5e1; /* text-slate-300 */ }
+
+    /* Status Badges */
+    .mps-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.875rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        white-space: nowrap;
+    }
+    .mps-badge::before {
+        content: '';
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: currentColor;
+        flex-shrink: 0;
+    }
+
+    .mps-badge-success {
+        background-color: #dcfce7; /* green-100 */
+        color: #166534; /* green-800 */
+        border: 1px solid #bbf7d0;
+    }
+    [data-theme="dark"] .mps-badge-success {
+        background-color: rgba(16, 185, 129, 0.15); /* emerald-500 / 15% */
+        color: #34d399; /* emerald-400 */
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .mps-badge-primary {
+        background-color: #e0e7ff; /* indigo-100 */
+        color: #3730a3; /* indigo-800 */
+        border: 1px solid #c7d2fe;
+    }
+    [data-theme="dark"] .mps-badge-primary {
+        background-color: rgba(99, 102, 241, 0.15); /* indigo-500 / 15% */
+        color: #818cf8; /* indigo-400 */
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    /* Action Buttons */
+    .mps-action-group {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+    }
+    
+    .mps-btn-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.875rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border-color);
+        background-color: transparent;
+        text-decoration: none;
+        transition: all 0.15s;
+        white-space: nowrap;
+    }
+    
+    .mps-btn-outline-view {
+        color: var(--alert-info-text);
+        border-color: var(--alert-info-border);
+    }
+    .mps-btn-outline-view:hover {
+        background-color: var(--badge-info-bg);
+    }
+
+    .mps-btn-outline-pdf {
+        color: #475569; /* text-slate-600 */
+    }
+    [data-theme="dark"] .mps-btn-outline-pdf {
+        color: #cbd5e1; /* text-slate-300 */
+    }
+    .mps-btn-outline-pdf:hover {
+        background-color: var(--hover-bg);
+        border-color: var(--text-muted);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="mb-4">
-    <h2>Payslip History</h2>
-    <p class="text-muted">View and download your monthly payslips.</p>
+    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">Payslip History</h2>
+    <p style="color: var(--text-muted); margin: 0;">View and download your monthly payslips.</p>
 </div>
 
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="bg-light">
+<div class="mps-card">
+    <div class="mps-table-wrapper">
+        <table class="mps-table">
+            <thead class="mps-thead">
                 <tr>
-                    <th>Month/Year</th>
-                    <th>Payslip ID</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th class="mps-th">Month/Year</th>
+                    <th class="mps-th">Payslip ID</th>
+                    <th class="mps-th">Status</th>
+                    <th class="mps-th">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="mps-tbody">
                 {% for ps in payslips %}
                 <tr>
-                    <td>{{ ps.month }}/{{ ps.financial_year }}</td>
-                    <td>{{ ps.payslip_id }}</td>
-                    <td>
-                        <span class="badge {% if ps.status == 'Paid' %}bg-success{% else %}bg-primary{% endif %}">
+                    <td class="mps-td mps-text-primary">
+                        {{ ps.month }}/{{ ps.financial_year }}
+                    </td>
+                    <td class="mps-td">
+                        <span class="mps-text-mono">{{ ps.payslip_id }}</span>
+                    </td>
+                    <td class="mps-td">
+                        <span class="mps-badge {% if ps.status == 'Paid' or ps.status == 'Confirmed' %}mps-badge-success{% else %}mps-badge-primary{% endif %}">
                             {{ ps.status }}
                         </span>
                     </td>
-                    <td>
-                        <a href="{{ url_for('employee.view_payslip', payslip_id=ps.payslip_id) }}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i> View</a>
-                        <a href="{{ url_for('employee.download_payslip', payslip_id=ps.payslip_id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> PDF</a>
+                    <td class="mps-td">
+                        <div class="mps-action-group">
+                            <a href="{{ url_for('employee.view_payslip', payslip_id=ps.payslip_id) }}" class="mps-btn-outline mps-btn-outline-view">
+                                <i class="bi bi-eye"></i> View Detail
+                            </a>
+                            <a href="{{ url_for('employee.download_payslip', payslip_id=ps.payslip_id) }}" class="mps-btn-outline mps-btn-outline-pdf">
+                                <i class="bi bi-file-earmark-pdf"></i> Download PDF
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4" class="text-center text-muted py-4">No payslips available yet.</td>
+                    <td colspan="4" class="mps-td" style="text-align: center; color: var(--text-muted); padding: 3rem 0;">
+                        No payslips available yet.
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

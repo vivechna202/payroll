@@ -4,53 +4,231 @@
 {% block page_title %}My Payroll History{% endblock %}
 {% block page_subtitle %}Monthly payroll history and payout status{% endblock %}
 
-{% block content %}
-<div class="mb-4">
-    <a href="{{ url_for('ess.my_dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
-</div>
+{% block head_extra %}
+<style>
+    /* ── My Payroll History – Theme-aware styles ──────────────────────── */
 
-<div class="card shadow-sm border-0">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light">
-                    <tr>
-                        <th>Period</th>
-                        <th class="text-end">Gross Salary</th>
-                        <th class="text-end">Deductions</th>
-                        <th class="text-end">TDS (Tax)</th>
-                        <th class="text-end fw-bold text-success">Net Payout</th>
-                        <th class="text-center">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="border-top-0">
-                    {% for p in payroll_history %}
-                    {% set gross = p.gross_salary|float %}
-                    {% set net = p.net_salary|float %}
-                    {% set deductions = gross - net %}
-                    <tr>
-                        <td>
-                            <div class="fw-bold">{{ p.month }}/{{ p.financial_year }}</div>
-                            <small class="text-muted font-monospace">{{ p.payroll_id }}</small>
-                        </td>
-                        <td class="text-end">₹{{ "{:,.2f}".format(gross) }}</td>
-                        <td class="text-end text-danger">-₹{{ "{:,.2f}".format(deductions - p.tds|default(0)|float) }}</td>
-                        <td class="text-end text-warning">-₹{{ "{:,.2f}".format(p.tds|default(0)|float) }}</td>
-                        <td class="text-end fw-bold text-success">₹{{ "{:,.2f}".format(net) }}</td>
-                        <td class="text-center">
-                            <span class="badge {% if p.payroll_status == 'LOCKED' %}bg-danger{% else %}bg-success{% endif %}">
-                                {{ p.payroll_status }}
-                            </span>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-5">No payroll records found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    /* Back Button */
+    .mph-btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 0.625rem;
+        border: 1px solid var(--border-color);
+        background-color: transparent;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+        cursor: pointer;
+        margin-bottom: 1.5rem;
+    }
+    .mph-btn-back:hover {
+        border-color: var(--text-muted);
+        color: var(--text-primary);
+        background-color: var(--hover-bg);
+    }
+
+    /* Container Card */
+    .mph-card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* Data Table */
+    .mph-table-wrapper {
+        overflow-x: auto;
+    }
+    .mph-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+    
+    .mph-thead {
+        background-color: var(--bg-surface);
+        border-bottom: 1px solid var(--border-color);
+    }
+    .mph-th {
+        padding: 1.125rem 1.5rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #475569;
+        text-align: left;
+        white-space: nowrap;
+    }
+    [data-theme="dark"] .mph-th { color: #94a3b8; }
+    
+    .mph-th.text-right, .mph-td.text-right { text-align: right; }
+    .mph-th.text-center, .mph-td.text-center { text-align: center; }
+
+    .mph-tbody tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.15s;
+    }
+    .mph-tbody tr:last-child {
+        border-bottom: none;
+    }
+    .mph-tbody tr:hover {
+        background-color: var(--hover-bg);
+    }
+
+    .mph-td {
+        padding: 1.25rem 1.5rem;
+        color: #0f172a;
+        vertical-align: middle;
+    }
+    [data-theme="dark"] .mph-td { color: #f1f5f9; }
+
+    /* Period Column */
+    .mph-period-text {
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 0.125rem;
+    }
+    [data-theme="dark"] .mph-period-text { color: #f1f5f9; }
+
+    .mph-period-id {
+        font-family: ui-monospace, 'Cascadia Code', monospace;
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+    [data-theme="dark"] .mph-period-id { color: #94a3b8; }
+
+    /* Financial Values */
+    .mph-val {
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+    }
+    .mph-val-deduct { color: #ef4444; }
+    [data-theme="dark"] .mph-val-deduct { color: #f87171; }
+    .mph-val-tax { color: #f59e0b; }
+    [data-theme="dark"] .mph-val-tax { color: #fbbf24; }
+    .mph-val-net { font-weight: 700; color: #10b981; }
+    [data-theme="dark"] .mph-val-net { color: #34d399; }
+
+    /* Badges */
+    .mph-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+    }
+    .mph-badge::before {
+        content: '';
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: currentColor;
+        flex-shrink: 0;
+    }
+
+    .mph-badge-error {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+    [data-theme="dark"] .mph-badge-error {
+        background-color: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .mph-badge-processed {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+    [data-theme="dark"] .mph-badge-processed {
+        background-color: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+    
+    .mph-badge-default {
+        background-color: var(--bg-surface);
+        color: #475569;
+        border: 1px solid var(--border-color);
+    }
+    [data-theme="dark"] .mph-badge-default {
+        color: #cbd5e1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('ess.my_dashboard') }}" class="mph-btn-back">
+    <i class="bi bi-arrow-left"></i> Back to Dashboard
+</a>
+
+<div class="mph-card">
+    <div class="mph-table-wrapper">
+        <table class="mph-table">
+            <thead class="mph-thead">
+                <tr>
+                    <th class="mph-th">Period</th>
+                    <th class="mph-th text-right">Gross Salary</th>
+                    <th class="mph-th text-right">Deductions</th>
+                    <th class="mph-th text-right">TDS (Tax)</th>
+                    <th class="mph-th text-right">Net Payout</th>
+                    <th class="mph-th text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody class="mph-tbody">
+                {% for p in payroll_history %}
+                {% set gross = p.gross_salary|float %}
+                {% set net = p.net_salary|float %}
+                {% set deductions = gross - net %}
+                <tr>
+                    <td class="mph-td">
+                        <div class="mph-period-text">{{ p.month }}/{{ p.financial_year }}</div>
+                        <div class="mph-period-id">{{ p.payroll_id }}</div>
+                    </td>
+                    <td class="mph-td text-right mph-val">
+                        ₹{{ "{:,.2f}".format(gross) }}
+                    </td>
+                    <td class="mph-td text-right mph-val mph-val-deduct">
+                        -₹{{ "{:,.2f}".format(deductions - p.tds|default(0)|float) }}
+                    </td>
+                    <td class="mph-td text-right mph-val mph-val-tax">
+                        -₹{{ "{:,.2f}".format(p.tds|default(0)|float) }}
+                    </td>
+                    <td class="mph-td text-right mph-val mph-val-net">
+                        ₹{{ "{:,.2f}".format(net) }}
+                    </td>
+                    <td class="mph-td text-center">
+                        {% if p.payroll_status == 'LOCKED' or p.payroll_status == 'ERROR' or p.payroll_status == 'Error' %}
+                            <span class="mph-badge mph-badge-error">{{ p.payroll_status }}</span>
+                        {% elif p.payroll_status == 'PROCESSED' or p.payroll_status == 'Processed' %}
+                            <span class="mph-badge mph-badge-processed">{{ p.payroll_status }}</span>
+                        {% else %}
+                            <span class="mph-badge mph-badge-default">{{ p.payroll_status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="mph-td text-center" style="color: var(--text-muted); padding: 3rem 0;">
+                        No payroll records found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
