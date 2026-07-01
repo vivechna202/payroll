@@ -305,9 +305,11 @@ def compute_preview(
         for k, v in extra_inputs.items():
             context[k.upper()] = float(v)
 
-    # Pre-seed all component codes to 0
+    # Pre-seed all component codes to 0, but don't overwrite existing context values
     for comp in components:
-        context[comp["code"].upper()] = 0.0
+        code = comp["code"].upper()
+        if code not in context:
+            context[code] = 0.0
 
     # ── Two-pass evaluation (earnings → then update GROSS → deductions) ──
     earnings_rows = []
@@ -355,9 +357,14 @@ def compute_preview(
         context[code] = round(val, 2)
         return round(val, 2)
 
-    # Pass 1 – Earnings
+    # Pass 1 – Earnings (except SPECIAL)
+    special_comp = None
     for comp in components:
         if comp.get("category") != "Earning":
+            continue
+        code = comp["code"].upper()
+        if code == "SPECIAL":
+            special_comp = comp
             continue
         val = _eval_component(comp)
         earnings_total += val
@@ -365,15 +372,34 @@ def compute_preview(
             taxable_total += val
         earnings_rows.append({
             "name": comp["name"],
-            "code": comp["code"].upper(),
+            "code": code,
             "category": "Earning",
             "computation_type": comp.get("computation_type"),
             "taxable": comp.get("taxable"),
             "amount": val,
         })
 
-    # Update GROSS after earnings
-    context["GROSS"] = round(earnings_total, 2)
+    # Calculate SPECIAL as balancing component to match contract gross
+    contract_gross = float(gross_override) if gross_override else float(basic_salary)
+    if special_comp:
+        special_amount = round(contract_gross - earnings_total, 2)
+        if special_amount < 0:
+            special_amount = 0.0
+        context["SPECIAL"] = special_amount
+        earnings_total += special_amount
+        if special_comp.get("taxable") == "Yes":
+            taxable_total += special_amount
+        earnings_rows.append({
+            "name": special_comp["name"],
+            "code": "SPECIAL",
+            "category": "Earning",
+            "computation_type": special_comp.get("computation_type"),
+            "taxable": special_comp.get("taxable"),
+            "amount": special_amount,
+        })
+
+    # Update GROSS after earnings to match contract gross
+    context["GROSS"] = contract_gross
     context["NET"] = round(earnings_total, 2)  # tentative before deductions
 
     # Pass 2 – Deductions
