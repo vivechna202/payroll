@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block title %}Payslip Dashboard – TaxPro HRMS{% endblock %}
+{% block page_title %}Payslip Dashboard{% endblock %}
+{% block page_subtitle %}Overview of payslip generation, status tracking, and batch distribution{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* ── Payslip Dashboard – Theme-aware styles ─────────────── */
+
+  /* ── Metric Cards ──────────────────────────────────────── */
+  .ps-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 900px) {
+    .ps-metric-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .ps-metric-grid { grid-template-columns: 1fr; }
+  }
+
+  .ps-metric-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 1.25rem 1.375rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+  .ps-metric-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    border-color: var(--text-muted);
+  }
+
+  .ps-metric-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+  }
+
+  .ps-metric-number {
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+
+  /* Accent colors for numbers */
+  .ps-num-total   { color: var(--text-primary); }
+
+  .ps-num-draft   { color: #64748b; }
+  [data-theme="dark"] .ps-num-draft { color: #94a3b8; }
+
+  .ps-num-confirm { color: #4f46e5; }
+  [data-theme="dark"] .ps-num-confirm { color: #818cf8; }
+
+  .ps-num-paid    { color: #059669; }
+  [data-theme="dark"] .ps-num-paid { color: #34d399; }
+
+  /* Accent dot strip at bottom of each card */
+  .ps-metric-card::after {
+    content: '';
+    display: block;
+    height: 3px;
+    border-radius: 9999px;
+    margin-top: 0.5rem;
+    background-color: var(--border-color);
+  }
+  .ps-metric-card.total::after  { background-color: rgba(99,102,241,0.25); }
+  .ps-metric-card.draft::after  { background-color: rgba(100,116,139,0.3); }
+  .ps-metric-card.confirm::after{ background-color: rgba(99,102,241,0.45); }
+  .ps-metric-card.paid::after   { background-color: rgba(16,185,129,0.45); }
+
+  .ps-metric-sublabel {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+  }
+
+  /* ── Batch Table Section ───────────────────────────────── */
+  .ps-section {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+
+  .ps-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.125rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-surface);
+  }
+
+  .ps-section-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .ps-section-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.1rem;
+  }
+
+  .ps-table-scroll { overflow-x: auto; }
+
+  .ps-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .ps-thead {
+    background-color: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .ps-th {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .ps-tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.15s;
+  }
+  .ps-tbody tr:last-child { border-bottom: none; }
+  .ps-tbody tr:hover { background-color: var(--hover-bg); }
+
+  .ps-td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    color: var(--text-secondary);
+  }
+
+  /* Batch ID – monospace, primary accent */
+  .ps-batch-id {
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--alert-info-text);
+    white-space: nowrap;
+  }
+
+  /* Month / Description */
+  .ps-cell-primary {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .ps-cell-muted {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+  }
+
+  /* ── Status Badges ────────────────────────────────────── */
+  .ps-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+  .ps-pill::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+    flex-shrink: 0;
+  }
+
+  .ps-pill-locked {
+    background-color: var(--badge-danger-bg);
+    color: var(--badge-danger-text);
+    border: 1px solid var(--badge-danger-border);
+  }
+  .ps-pill-processed {
+    background-color: var(--badge-info-bg);
+    color: var(--badge-info-text);
+    border: 1px solid var(--badge-info-border);
+  }
+  .ps-pill-done {
+    background-color: var(--badge-success-bg);
+    color: var(--badge-success-text);
+    border: 1px solid var(--badge-success-border);
+  }
+  .ps-pill-default {
+    background-color: var(--bg-surface);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+  }
+
+  /* ── Manage Payslips button ────────────────────────────── */
+  .ps-btn-manage {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.4rem 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    border: 1px solid var(--alert-info-border);
+    background-color: var(--alert-info-bg);
+    color: var(--alert-info-text);
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+  .ps-btn-manage:hover {
+    background-color: var(--badge-info-bg);
+    border-color: var(--badge-info-border);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.15);
+  }
+  .ps-btn-manage:active { transform: scale(0.98); }
+
+  /* ── Empty state ────────────────────────────────────────── */
+  .ps-empty {
+    padding: 3.5rem 1rem;
+    text-align: center;
+  }
+  .ps-empty-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.25rem;
+    color: var(--text-muted);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Metric Cards ───────────────────────────────────────── -->
+<div class="ps-metric-grid">
+
+  <!-- Total Payslips -->
+  <div class="ps-metric-card total">
+    <div class="ps-metric-label">Total Payslips</div>
+    <div class="ps-metric-number ps-num-total">{{ stats.total }}</div>
+    <div class="ps-metric-sublabel">All statuses combined</div>
+  </div>
+
+  <!-- Draft -->
+  <div class="ps-metric-card draft">
+    <div class="ps-metric-label">Draft</div>
+    <div class="ps-metric-number ps-num-draft">{{ stats.draft }}</div>
+    <div class="ps-metric-sublabel">Pending confirmation</div>
+  </div>
+
+  <!-- Confirmed -->
+  <div class="ps-metric-card confirm">
+    <div class="ps-metric-label">Confirmed</div>
+    <div class="ps-metric-number ps-num-confirm">{{ stats.confirmed }}</div>
+    <div class="ps-metric-sublabel">Awaiting payment</div>
+  </div>
+
+  <!-- Paid -->
+  <div class="ps-metric-card paid">
+    <div class="ps-metric-label">Paid</div>
+    <div class="ps-metric-number ps-num-paid">{{ stats.paid }}</div>
+    <div class="ps-metric-sublabel">Successfully disbursed</div>
+  </div>
+
+</div>
+
+<!-- ── Ready for Payslip Generation ──────────────────────── -->
+<div class="ps-section">
+
+  <div class="ps-section-header">
+    <div>
+      <h3 class="ps-section-title">Ready for Payslip Generation</h3>
+      <div class="ps-section-sub">Processed &amp; locked payroll batches available for payslip creation</div>
+    </div>
+  </div>
+
+  <div class="ps-table-scroll">
+    <table class="ps-table">
+      <thead class="ps-thead">
+        <tr>
+          <th class="ps-th">Batch ID</th>
+          <th class="ps-th">Month</th>
+          <th class="ps-th">Description</th>
+          <th class="ps-th">Status</th>
+          <th class="ps-th">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="ps-tbody">
+        {% for batch in batches %}
+        <tr>
+          <!-- Batch ID -->
+          <td class="ps-td">
+            <span class="ps-batch-id">{{ batch.batch_id }}</span>
+          </td>
+
+          <!-- Month -->
+          <td class="ps-td">
+            <span class="ps-cell-primary">{{ batch.month_name }} {{ batch.year }}</span>
+          </td>
+
+          <!-- Description -->
+          <td class="ps-td">
+            <span class="ps-cell-muted">{{ batch.description }}</span>
+          </td>
+
+          <!-- Status Badge -->
+          <td class="ps-td">
+            {% if batch.status == 'LOCKED' %}
+              <span class="ps-pill ps-pill-locked">{{ batch.status }}</span>
+            {% elif batch.status == 'PROCESSED' %}
+              <span class="ps-pill ps-pill-processed">{{ batch.status }}</span>
+            {% elif batch.status == 'Done' or batch.status == 'DONE' %}
+              <span class="ps-pill ps-pill-done">{{ batch.status }}</span>
+            {% else %}
+              <span class="ps-pill ps-pill-default">{{ batch.status }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Manage Action -->
+          <td class="ps-td">
+            <a href="{{ url_for('payslips.batch_payslips', batch_id=batch.batch_id) }}"
+               class="ps-btn-manage">
+              <i class="bi bi-files"></i> Manage Payslips
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5">
+            <div class="ps-empty">
+              <div class="ps-empty-icon">
+                <i class="bi bi-inbox-fill"></i>
+              </div>
+              <p style="font-size:0.875rem; font-weight:600; color:var(--text-primary); margin:0 0 0.375rem;">
+                No batches ready
+              </p>
+              <p style="font-size:0.75rem; color:var(--text-muted); margin:0;">
+                No processed or locked batches found for payslip generation.
+              </p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+{% endblock %}

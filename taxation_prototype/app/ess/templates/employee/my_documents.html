@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}My Documents – ESS Portal{% endblock %}
+{% block page_title %}My Documents{% endblock %}
+{% block page_subtitle %}Access generated documents and certifications{% endblock %}
+
+{% block content %}
+<!-- Back to Dashboard Button -->
+<div class="mb-6">
+    <a href="{{ url_for('ess.my_dashboard') }}" 
+       class="btn-secondary inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:border-slate-400 dark:hover:border-slate-500"
+       style="border: 1px solid var(--border-color); color: var(--text-secondary); background-color: transparent;">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Dashboard
+    </a>
+</div>
+
+<!-- Document Table Card -->
+<div class="rounded-xl border overflow-hidden" style="background-color: var(--bg-card); border-color: var(--border-color);">
+    <!-- Table Header -->
+    <div class="px-6 py-4 border-b" style="border-color: var(--border-color);">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: rgba(99, 102, 241, 0.1);">
+                <svg class="w-5 h-5" style="color: #6366f1;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-25.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-base font-semibold" style="color: var(--text-primary);">Document History</h2>
+                <p class="text-xs" style="color: var(--text-muted);">View and manage your generated documents</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b" style="border-color: var(--border-color);">
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Document Name</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Type</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Generation Date</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Source</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr class="border-b transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800/50" style="border-color: var(--border-color);">
+                    <!-- Document Name -->
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background-color: rgba(239, 68, 68, 0.1);">
+                                <svg class="w-4 h-4" style="color: #dc2626;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <span class="text-sm font-medium break-words" style="color: var(--text-primary);">{{ doc.name }}</span>
+                        </div>
+                    </td>
+                    
+                    <!-- Type -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm" style="color: var(--text-secondary);">{{ doc.type }}</span>
+                    </td>
+                    
+                    <!-- Generation Date -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm" style="color: var(--text-secondary);">{{ doc.date }}</span>
+                    </td>
+                    
+                    <!-- Source Badge -->
+                    <td class="px-6 py-4">
+                        <span class="pill-badge pill-blue">{{ doc.source }}</span>
+                    </td>
+                    
+                    <!-- Actions -->
+                    <td class="px-6 py-4 text-right">
+                        {% if doc.type == 'Form 16 Tax Document' %}
+                        <a href="{{ url_for('employee.form16_download') }}" 
+                           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500"
+                           style="border: 1px solid var(--border-color); color: var(--text-secondary); background-color: transparent;">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                            Go to Download
+                        </a>
+                        {% elif doc.type == 'Contract' %}
+                        <a href="{{ url_for('ess.my_contracts') }}" 
+                           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500"
+                           style="border: 1px solid var(--border-color); color: var(--text-secondary); background-color: transparent;">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            View Contract
+                        </a>
+                        {% elif doc.type == 'Full & Final Settlement' %}
+                        <a href="{{ url_for('employee.my_fnf') }}" 
+                           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500"
+                           style="border: 1px solid var(--border-color); color: var(--text-secondary); background-color: transparent;">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            F&F Settlement
+                        </a>
+                        {% else %}
+                        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium" style="color: var(--text-muted);">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            View Only
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background-color: var(--hover-bg);">
+                                <svg class="w-8 h-8" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-medium" style="color: var(--text-muted);">No documents found.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

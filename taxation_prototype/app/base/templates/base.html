@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}TaxPro HRMS{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Employee Taxation Management System{% endblock %}" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            },
+            surface: '#0f172a',
+            card:    '#1e293b',
+            border:  '#334155',
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body class="h-full font-sans antialiased" style="background-color: var(--bg-surface); color: var(--text-primary);">
+
+{% if session.user %}
+<!-- ══════════════════════════════════════════════════
+     AUTHENTICATED LAYOUT
+══════════════════════════════════════════════════ -->
+<div class="flex h-full min-h-screen">
+
+  <!-- ── Sidebar ────────────────────────────────── -->
+  <aside id="sidebar"
+         class="w-64 flex-shrink-0 flex flex-col transition-all duration-300"
+         style="background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color);">
+
+    <!-- Logo -->
+    <div class="px-6 py-5 flex items-center gap-3" style="border-bottom: 1px solid var(--border-color);">
+      <div class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg">
+        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-sm font-bold leading-tight" style="color: var(--text-primary);">TaxPro</p>
+        <p class="text-[10px] uppercase tracking-widest" style="color: var(--text-muted);">HRMS · FY {{ fy if fy else '2024-25' }}</p>
+      </div>
+    </div>
+
+    <!-- Role Badge -->
+    <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-color);">
+      <div class="flex items-center gap-2 px-3 py-2 rounded-lg"
+           {% if session.user.role == 'hr' %}
+           style="background-color: var(--alert-success-bg); border: 1px solid var(--alert-success-border);"
+           {% else %}
+           style="background-color: var(--alert-info-bg); border: 1px solid var(--alert-info-border);"
+           {% endif %}>
+        <span class="w-2 h-2 rounded-full animate-pulse"
+             {% if session.user.role == 'hr' %}
+             style="background-color: var(--alert-success-text);"
+             {% else %}
+             style="background-color: var(--alert-info-text);"
+             {% endif %}></span>
+        <span class="text-xs font-semibold uppercase tracking-wider"
+             {% if session.user.role == 'hr' %}
+             style="color: var(--alert-success-text);"
+             {% else %}
+             style="color: var(--alert-info-text);"
+             {% endif %}>
+          {{ session.user.role }} Portal
+        </span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+
+      <!-- Dashboard -->
+      <a href="{{ url_for('dashboard') }}"
+         class="nav-link {% if active_page == 'dashboard' %}nav-link-active{% endif %}">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        Dashboard
+      </a>
+
+      {% if session.user.role in ['employee', 'manager', 'hr'] %}
+      <!-- Employee Portal -->
+      <div class="pt-3 pb-1">
+        <p class="px-3 text-[10px] font-semibold uppercase tracking-widest" style="color: var(--text-muted);">Employee Portal (ESS)</p>
+      </div>
+
+      <div id="employee-portal-group" class="space-y-1">
+        <button id="employee-portal-toggle" type="button"
+                class="nav-link nav-link-parent flex items-center justify-between w-full"
+                aria-expanded="true"
+                aria-controls="employee-portal-children">
+          <span class="flex items-center gap-3">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3 7h18M3 12h18M3 17h18"/>
+            </svg>
+            <span>My Self Service</span>
+          </span>
+          <svg id="employee-portal-icon" class="w-4 h-4 transition-transform duration-200"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <div id="employee-portal-children" class="overflow-hidden transition-all duration-300" style="max-height: 999px;">
+          <a href="{{ url_for('ess.my_dashboard') }}"
+             class="nav-link nav-link-child {% if active_page == 'ess_dashboard' %}nav-link-active{% endif %}">
+            My Dashboard
+          </a>
+          <a href="{{ url_for('ess.my_profile') }}"
+             class="nav-link nav-link-child {% if active_page == 'ess_profile' %}nav-link-active{% endif %}">
+            My Profile
+          </a>
+          <a href="{{ url_for('ess.my_contracts') }}"
+             class="nav-link nav-link-child {% if active_page == 'ess_contracts' %}nav-link-active{% endif %}">
+            My Contracts
+          </a>
+          <a href="{{ url_for('ess.my_salary_structure') }}"
+             class="nav-link nav-link-child {% if active_page == 'ess_salary_structure' %}nav-link-active{% endif %}">
+            My Salary Structure
+          </a>
+          <a href="{{ url_for('ess.my_payroll_history') }}"
+             class="nav-link nav-link-child {% if active_page == 'ess_payroll_history' %}nav-link-active{% endif %}">
+            My Payroll History
+          </a>
+          <a href="{{ url_for('employee.history') }}"
+             class="nav-link nav-link-child {% if active_page == 'my_payslips' %}nav-link-active{% endif %}">
+            My Payslips
+          </a>
+          <a href="{{ url_for('employee.investment_declaration') }}"
+             class="nav-link nav-link-child {% if active_page == 'investment_declaration' %}nav-link-active{% endif %}">
+            My Tax Declarations
+          </a>
+          <a href="{{ url_for('employee.proof_upload') }}"
+             class="nav-link nav-link-child {% if active_page == 'proof_upload' %}nav-link-active{% endif %}">
+            My Investment Proofs
+          </a>
+          <a href="{{ url_for('employee.my_fnf') }}"
+             class="nav-link nav-link-child {% if active_page == 'my_fnf' %}nav-link-active{% endif %}">
+            My Full & Final Settlement
+          </a>
+          <a href="{{ url_for('ess.my_documents') }}"
+             class="nav-link nav-link-child {% if active_page == 'ess_documents' %}nav-link-active{% endif %}">
+            My Documents
+          </a>
+          <a href="{{ url_for('ess.my_notifications') }}"
+             class="nav-link nav-link-child {% if active_page == 'ess_notifications' %}nav-link-active{% endif %}">
+            My Notifications
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if session.user.role in ['manager', 'hr'] %}
+      <!-- Manager Portal -->
+      <div class="pt-3 pb-1">
+        <p class="px-3 text-[10px] font-semibold uppercase tracking-widest" style="color: var(--text-muted);">Manager Portal (MSS)</p>
+      </div>
+
+      <div id="manager-portal-group" class="space-y-1">
+        <button id="manager-portal-toggle" type="button"
+                class="nav-link nav-link-parent flex items-center justify-between w-full"
+                aria-expanded="true"
+                aria-controls="manager-portal-children">
+          <span class="flex items-center gap-3">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span>Team Management</span>
+          </span>
+          <svg id="manager-portal-icon" class="w-4 h-4 transition-transform duration-200"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <div id="manager-portal-children" class="overflow-hidden transition-all duration-300" style="max-height: 999px;">
+          <a href="{{ url_for('ess.team_dashboard') }}"
+             class="nav-link nav-link-child {% if active_page == 'mss_dashboard' %}nav-link-active{% endif %}">
+            Team Dashboard
+          </a>
+          <a href="{{ url_for('ess.team_members') }}"
+             class="nav-link nav-link-child {% if active_page == 'mss_team' %}nav-link-active{% endif %}">
+            Team Members
+          </a>
+          <a href="{{ url_for('ess.team_payroll') }}"
+             class="nav-link nav-link-child {% if active_page == 'mss_payroll' %}nav-link-active{% endif %}">
+            Team Payroll Overview
+          </a>
+          <a href="{{ url_for('ess.team_contracts') }}"
+             class="nav-link nav-link-child {% if active_page == 'mss_contracts' %}nav-link-active{% endif %}">
+            Team Contracts
+          </a>
+          <a href="{{ url_for('ess.approval_dashboard') }}"
+             class="nav-link nav-link-child {% if active_page == 'mss_approvals' %}nav-link-active{% endif %}">
+            Approval Dashboard
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if session.user.role == 'hr' %}
+      <!-- HR Portal -->
+      <div class="pt-3 pb-1">
+        <p class="px-3 text-[10px] font-semibold uppercase tracking-widest" style="color: var(--text-muted);">HR Portal</p>
+      </div>
+
+      <div id="hr-portal-group" class="space-y-1">
+        <button id="hr-portal-toggle" type="button"
+                class="nav-link nav-link-parent flex items-center justify-between w-full"
+                aria-expanded="true"
+                aria-controls="hr-portal-children">
+          <span class="flex items-center gap-3">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3 7h18M3 12h18M3 17h18"/>
+            </svg>
+            <span>HR Portal</span>
+          </span>
+          <svg id="hr-portal-icon" class="w-4 h-4 transition-transform duration-200"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <div id="hr-portal-children" class="overflow-hidden transition-all duration-300" style="max-height: 999px;">
+          <a href="{{ url_for('hr.payroll_processing') }}"
+             class="nav-link nav-link-child {% if active_page == 'payroll_processing' %}nav-link-active{% endif %}">
+            Payroll Processing
+          </a>
+          <a href="{{ url_for('hr.payroll_register') }}"
+             class="nav-link nav-link-child {% if active_page == 'payroll_register' %}nav-link-active{% endif %}">
+            Payroll Register
+          </a>
+          <a href="{{ url_for('hr.monthly_tds') }}"
+             class="nav-link nav-link-child {% if active_page == 'monthly_tds' %}nav-link-active{% endif %}">
+            Monthly TDS
+          </a>
+          <a href="{{ url_for('hr.challan_details') }}"
+             class="nav-link nav-link-child {% if active_page == 'challan_details' %}nav-link-active{% endif %}">
+            Challan Management
+          </a>
+          <a href="{{ url_for('hr.declarations') }}"
+             class="nav-link nav-link-child {% if active_page == 'hr_declarations' %}nav-link-active{% endif %}">
+            Employee Declarations
+          </a>
+          <a href="{{ url_for('hr.proof_approval') }}"
+             class="nav-link nav-link-child {% if active_page == 'proof_approval' %}nav-link-active{% endif %}">
+            Proof Approval
+          </a>
+          <a href="{{ url_for('hr.declaration_window') }}"
+             class="nav-link nav-link-child {% if active_page == 'declaration_window' %}nav-link-active{% endif %}">
+            Declaration Window
+          </a>
+          <a href="{{ url_for('hr.form24q') }}"
+             class="nav-link nav-link-child {% if active_page == 'form24q' %}nav-link-active{% endif %}">
+            Form24Q
+          </a>
+          <a href="{{ url_for('hr.form16') }}"
+             class="nav-link nav-link-child {% if active_page == 'form16' %}nav-link-active{% endif %}">
+            Form16
+          </a>
+          <a href="{{ url_for('form16_processing.dashboard') }}"
+             class="nav-link nav-link-child {% if active_page == 'form16_processing' %}nav-link-active{% endif %}">
+            Form16 Processing
+          </a>
+          <a href="{{ url_for('contracts.list_contracts') }}"
+             class="nav-link nav-link-child {% if active_page == 'employee_contracts' %}nav-link-active{% endif %}">
+            Employee Contracts
+          </a>
+          <a href="{{ url_for('salary.list_components') }}"
+             class="nav-link nav-link-child {% if active_page == 'salary_components' %}nav-link-active{% endif %}">
+            Salary Components
+          </a>
+          <a href="{{ url_for('salary.list_structures') }}"
+             class="nav-link nav-link-child {% if active_page == 'salary_structures' %}nav-link-active{% endif %}">
+            Salary Structures
+          </a>
+          <a href="{{ url_for('statutory.dashboard') }}"
+             class="nav-link nav-link-child {% if active_page == 'statutory_dashboard' %}nav-link-active{% endif %}">
+            Statutory Dashboard
+          </a>
+          <a href="{{ url_for('statutory.list_configs') }}"
+             class="nav-link nav-link-child {% if active_page == 'statutory_configs' %}nav-link-active{% endif %}">
+            Statutory Rules
+          </a>
+          <a href="{{ url_for('payroll_engine.dashboard') }}"
+             class="nav-link nav-link-child {% if active_page == 'payroll_engine' %}nav-link-active{% endif %}">
+            Payroll Engine
+          </a>
+          <a href="{{ url_for('payslips.dashboard') }}"
+             class="nav-link nav-link-child {% if active_page == 'payslips' %}nav-link-active{% endif %}">
+            Payslips
+          </a>
+          <a href="{{ url_for('fnf.dashboard') }}"
+             class="nav-link nav-link-child {% if active_page == 'fnf_dashboard' or active_page == 'fnf_list' or active_page == 'fnf_create' %}nav-link-active{% endif %}">
+            Full & Final Settlement
+          </a>
+          <a href="{{ url_for('reports.dashboard') }}"
+             class="nav-link nav-link-child {% if active_page in ['reports_dashboard','reports_payroll','reports_statutory','reports_employee'] %}nav-link-active{% endif %}">
+            Reports &amp; Analytics
+          </a>
+          <a href="{{ url_for('workflow.dashboard') }}"
+             class="nav-link nav-link-child {% if active_page in ['workflow_dashboard', 'workflow_list'] %}nav-link-active{% endif %}">
+            Workflow Approvals
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+    </nav>
+
+    <!-- User Card + Role Switch -->
+    <div class="px-4 py-4 space-y-3" style="border-top: 1px solid var(--border-color);">
+
+      <!-- Role Switch -->
+      <form method="POST" action="{{ url_for('auth.switch_role') }}" class="flex gap-2">
+        {% if session.user.role == 'hr' %}
+          <input type="hidden" name="role" value="employee" />
+          <button type="submit"
+                  class="flex-1 text-xs py-1.5 rounded-lg font-medium transition-colors duration-200"
+                  style="border: 1px solid var(--alert-info-border); color: var(--alert-info-text);"
+                  onmouseover="this.style.backgroundColor='var(--alert-info-bg)'"
+                  onmouseout="this.style.backgroundColor='transparent'">
+            Switch to Employee
+          </button>
+        {% else %}
+          <input type="hidden" name="role" value="hr" />
+          <button type="submit"
+                  class="flex-1 text-xs py-1.5 rounded-lg font-medium transition-colors duration-200"
+                  style="border: 1px solid var(--alert-success-border); color: var(--alert-success-text);"
+                  onmouseover="this.style.backgroundColor='var(--alert-success-bg)'"
+                  onmouseout="this.style.backgroundColor='transparent'">
+            Switch to HR View
+          </button>
+        {% endif %}
+      </form>
+
+      <!-- User Info -->
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700
+                    flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+          {{ session.user.name[0] }}
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium truncate" style="color: var(--text-primary);">{{ session.user.name }}</p>
+          <p class="text-xs truncate" style="color: var(--text-muted);">{{ session.user.employee_id }}</p>
+        </div>
+        <a href="{{ url_for('auth.logout') }}"
+           title="Logout"
+           class="p-1.5 rounded-lg transition-colors"
+           style="color: var(--text-secondary);"
+           onmouseover="this.style.color='#f87171'; this.style.backgroundColor='rgba(127,29,29,0.2)'"
+           onmouseout="this.style.color='var(--text-secondary)'; this.style.backgroundColor='transparent'">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main content ─────────────────────────── -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+    <!-- Top bar -->
+    <header class="h-14 flex items-center justify-between px-6 backdrop-blur-sm"
+            style="border-bottom: 1px solid var(--border-color); background-color: var(--header-bg);">
+      <div>
+        <h1 class="text-sm font-semibold" style="color: var(--text-primary);">{% block page_title %}Dashboard{% endblock %}</h1>
+        <p class="text-xs" style="color: var(--text-muted);">{% block page_subtitle %}Financial Year {{ fy if fy else '2024-25' }}{% endblock %}</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Notifications Bell -->
+        <a href="{{ url_for('notifications.list_notifications') }}"
+           class="p-2 rounded-lg transition-colors relative flex items-center justify-center"
+           style="color: var(--text-secondary); border: 1px solid var(--border-color);"
+           title="My Notifications"
+           onmouseover="this.style.borderColor='var(--text-muted)'; this.style.backgroundColor='var(--hover-bg)'"
+           onmouseout="this.style.borderColor='var(--border-color)'; this.style.backgroundColor='transparent'">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          {% if unread_notifications_count > 0 %}
+          <span class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[10px] w-4 h-4 flex items-center justify-center font-bold notification-badge">
+            {{ unread_notifications_count }}
+          </span>
+          {% endif %}
+        </a>
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle" 
+                class="p-2 rounded-lg transition-colors"
+                style="color: var(--text-secondary); border: 1px solid var(--border-color);"
+                title="Toggle Light/Dark Mode"
+                onmouseover="this.style.borderColor='var(--text-muted)'; this.style.backgroundColor='var(--hover-bg)'"
+                onmouseout="this.style.borderColor='var(--border-color)'; this.style.backgroundColor='transparent'">
+          <svg id="theme-icon-sun" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+          <svg id="theme-icon-moon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
+        <!-- Flash indicator -->
+        <div id="flash-area" class="hidden"></div>
+      </div>
+    </header>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="px-6 pt-4 space-y-2">
+          {% for category, message in messages %}
+            <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium"
+                        {% if category == 'success' %}
+                        style="background-color: var(--alert-success-bg); color: var(--alert-success-text); border: 1px solid var(--alert-success-border);"
+                        {% elif category == 'danger' %}
+                        style="background-color: var(--alert-danger-bg); color: var(--alert-danger-text); border: 1px solid var(--alert-danger-border);"
+                        {% elif category == 'warning' %}
+                        style="background-color: var(--alert-warning-bg); color: var(--alert-warning-text); border: 1px solid var(--alert-warning-border);"
+                        {% else %}
+                        style="background-color: var(--alert-info-bg); color: var(--alert-info-text); border: 1px solid var(--alert-info-border);"
+                        {% endif %}>
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Page Content -->
+    <main class="flex-1 overflow-y-auto p-6">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+</div>
+
+{% else %}
+<!-- ── Unauthenticated layout ──────────────────── -->
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<!-- Global JS -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

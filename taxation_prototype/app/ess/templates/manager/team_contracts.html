@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Team Contracts – MSS Portal{% endblock %}
+{% block page_title %}Team Contract Timeline{% endblock %}
+{% block page_subtitle %}Contracts timeline and status for direct reports{% endblock %}
+
+{% block content %}
+<!-- Back to Dashboard Button -->
+<div class="mb-6">
+    <a href="{{ url_for('ess.team_dashboard') }}" 
+       class="btn-secondary inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:border-slate-400 dark:hover:border-slate-500"
+       style="border: 1px solid var(--border-color); color: var(--text-secondary); background-color: transparent;">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Dashboard
+    </a>
+</div>
+
+<!-- Contract Timeline Table Card -->
+<div class="rounded-xl border overflow-hidden" style="background-color: var(--bg-card); border-color: var(--border-color);">
+    <!-- Table Header -->
+    <div class="px-6 py-4 border-b" style="border-color: var(--border-color);">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: rgba(99, 102, 241, 0.1);">
+                <svg class="w-5 h-5" style="color: #6366f1;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-base font-semibold" style="color: var(--text-primary);">Contract Timeline</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Contracts timeline and status for direct reports</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b" style="border-color: var(--border-color);">
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Employee</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Contract Reference</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Salary Structure</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Gross Monthly</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Start Date</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">End Date</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in team %}
+                {% if m.active_contract %}
+                {% set c = m.active_contract %}
+                <tr class="border-b transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800/50" style="border-color: var(--border-color);">
+                    <!-- Employee -->
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium" style="color: var(--text-primary);">{{ m.name }}</span>
+                            <span class="text-xs font-mono" style="color: var(--text-muted);">{{ m.employee_id }}</span>
+                        </div>
+                    </td>
+                    
+                    <!-- Contract Reference -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-mono font-medium" style="color: #6366f1;">{{ c.contract_id }}</span>
+                    </td>
+                    
+                    <!-- Salary Structure -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm" style="color: var(--text-secondary);">{{ c.salary_structure_type }}</span>
+                    </td>
+                    
+                    <!-- Gross Monthly -->
+                    <td class="px-6 py-4 text-right">
+                        <span class="text-sm font-mono" style="color: var(--text-secondary);">₹{{ "{:,.2f}".format(c.gross_salary|float) }}</span>
+                    </td>
+                    
+                    <!-- Start Date -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm" style="color: var(--text-secondary);">{{ c.start_date }}</span>
+                    </td>
+                    
+                    <!-- End Date -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm" style="color: var(--text-secondary);">{{ c.end_date or 'Permanent' }}</span>
+                    </td>
+                    
+                    <!-- Status -->
+                    <td class="px-6 py-4 text-center">
+                        {% if c.status == 'active' %}
+                        <span class="pill-badge pill-green">{{ c.status }}</span>
+                        {% else %}
+                        <span class="pill-badge" style="background-color: rgba(100, 116, 139, 0.1); color: var(--text-secondary); border: 1px solid rgba(100, 116, 139, 0.3);">{{ c.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr class="border-b transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800/50" style="border-color: var(--border-color);">
+                    <!-- Employee -->
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium" style="color: var(--text-primary);">{{ m.name }}</span>
+                            <span class="text-xs font-mono" style="color: var(--text-muted);">{{ m.employee_id }}</span>
+                        </div>
+                    </td>
+                    
+                    <!-- Empty State Message -->
+                    <td colspan="5" class="px-6 py-4">
+                        <span class="text-sm italic" style="color: var(--text-muted);">No active contracts mapped for this team member.</span>
+                    </td>
+                    
+                    <!-- Status -->
+                    <td class="px-6 py-4 text-center">
+                        <span class="pill-badge" style="background-color: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3);">No Contract</span>
+                    </td>
+                </tr>
+                {% endif %}
+                {% else %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background-color: var(--hover-bg);">
+                                <svg class="w-8 h-8" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-medium" style="color: var(--text-muted);">No team members assigned.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

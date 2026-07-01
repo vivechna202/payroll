@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Approval Dashboard – MSS Portal{% endblock %}
+{% block page_title %}Team Approvals & Verifications{% endblock %}
+{% block page_subtitle %}Review statutory declarations and investment proofs for direct reports{% endblock %}
+
+{% block content %}
+<!-- Back to Dashboard Button -->
+<div class="mb-6">
+    <a href="{{ url_for('ess.team_dashboard') }}" 
+       class="btn-secondary inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:border-slate-400 dark:hover:border-slate-500"
+       style="border: 1px solid var(--border-color); color: var(--text-secondary); background-color: transparent;">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Dashboard
+    </a>
+</div>
+
+<!-- Approvals Table Card -->
+<div class="rounded-xl border overflow-hidden" style="background-color: var(--bg-card); border-color: var(--border-color);">
+    <!-- Table Header -->
+    <div class="px-6 py-4 border-b" style="border-color: var(--border-color);">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: rgba(99, 102, 241, 0.1);">
+                <svg class="w-5 h-5" style="color: #6366f1;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-base font-semibold" style="color: var(--text-primary);">Pending Investment Proofs</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Review statutory declarations for team</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b" style="border-color: var(--border-color);">
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Employee ID</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Section</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Amount Declared</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Proof Document File</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Status</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pending_proofs %}
+                <tr class="border-b transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800/50" style="border-color: var(--border-color);">
+                    <!-- Employee ID -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-mono font-medium" style="color: #6366f1;">{{ p.employee_id }}</span>
+                    </td>
+                    
+                    <!-- Section -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm" style="color: var(--text-secondary);">{{ p.section }}</span>
+                    </td>
+                    
+                    <!-- Amount Declared -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-mono" style="color: var(--text-secondary);">₹{{ "{:,.2f}".format(p.amount|float) }}</span>
+                    </td>
+                    
+                    <!-- Proof Document File -->
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4" style="color: #6366f1;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <a href="{{ url_for('serve_upload', employee_id=p.employee_id, filename=p.filename) }}" target="_blank" 
+                               class="text-sm font-medium transition-colors duration-200 hover:text-indigo-600 dark:hover:text-indigo-400"
+                               style="color: #6366f1;">{{ p.filename }}</a>
+                        </div>
+                    </td>
+                    
+                    <!-- Status -->
+                    <td class="px-6 py-4">
+                        <span class="pill-badge" style="background-color: rgba(245, 158, 11, 0.1); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3);">PENDING MANAGER REVIEW</span>
+                    </td>
+                    
+                    <!-- Actions -->
+                    <td class="px-6 py-4 text-right">
+                        <a href="{{ url_for('serve_upload', employee_id=p.employee_id, filename=p.filename) }}" target="_blank"
+                           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500"
+                           style="border: 1px solid var(--border-color); color: var(--text-secondary); background-color: transparent;">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                            </svg>
+                            Process Approval
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background-color: var(--hover-bg);">
+                                <svg class="w-8 h-8" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-medium" style="color: var(--text-muted);">No pending approvals for your team at this time.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} – TaxPro HRMS{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}Read-only payroll report{% endblock %}
+
+{% block content %}
+<!-- Back Link -->
+<div class="mb-3">
+  <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+  <a href="{{ url_for('reports.payroll_report', report_type='monthly_summary', **filters) }}" class="btn btn-sm {% if report_type == 'monthly_summary' %}btn-primary{% else %}btn-outline-primary{% endif %} ms-1">Monthly Summary</a>
+  <a href="{{ url_for('reports.payroll_report', report_type='department', **filters) }}" class="btn btn-sm {% if report_type == 'department' %}btn-primary{% else %}btn-outline-primary{% endif %} ms-1">Department</a>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb-3 border-0 shadow-sm">
+  <div class="card-body py-3">
+    <form method="GET" action="{{ url_for('reports.payroll_report') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="report_type" value="{{ report_type }}">
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Financial Year</label>
+        <input type="text" name="fy" class="form-control form-control-sm" value="{{ filters.fy }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Month</label>
+        <select name="month" class="form-select form-select-sm">
+          <option value="">All Months</option>
+          {% set mnames=['January','February','March','April','May','June','July','August','September','October','November','December'] %}
+          {% for i in range(1,13) %}
+          <option value="{{ i }}" {% if filters.month == i|string %}selected{% endif %}>{{ mnames[i-1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Department</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for d in departments %}
+          <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Batch</label>
+        <select name="batch_id" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for b in batches %}
+          <option value="{{ b.batch_id }}" {% if filters.batch_id == b.batch_id %}selected{% endif %}>{{ b.batch_id }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label text-muted small fw-bold mb-1">Employee ID</label>
+        <input type="text" name="employee_id" class="form-control form-control-sm" value="{{ filters.employee_id }}" placeholder="e.g. EMP001">
+      </div>
+      <div class="col-md-2 d-flex gap-1 align-items-end">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Filter</button>
+        <a href="{{ url_for('reports.payroll_report', report_type=report_type) }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Export Bar -->
+<div class="d-flex justify-content-end gap-2 mb-3">
+  <button onclick="exportReport('excel')" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+  <button onclick="exportReport('csv')" class="btn btn-secondary btn-sm"><i class="bi bi-filetype-csv"></i> Export CSV</button>
+  <button onclick="window.print()" class="btn btn-outline-dark btn-sm"><i class="bi bi-printer"></i> Print / PDF</button>
+</div>
+
+<!-- Report Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive" style="max-height: 600px;">
+      {% if report_type == 'department' %}
+      <table class="table table-hover table-sm align-middle mb-0" style="font-size:.85rem; white-space:nowrap;">
+        <thead class="bg-light sticky-top">
+          <tr>
+            <th>Department</th>
+            <th class="text-end">Employees</th>
+            <th class="text-end">Gross Payroll</th>
+            <th class="text-end">Net Payroll</th>
+            <th class="text-end">Employee PF</th>
+            <th class="text-end">ESI</th>
+            <th class="text-end">PT</th>
+            <th class="text-end">TDS</th>
+            <th class="text-end">Employer Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td class="fw-semibold">{{ r.Department }}</td>
+            <td class="text-end">{{ r.employees }}</td>
+            <td class="text-end text-primary fw-bold">₹{{ "{:,.2f}".format(r.gross|float) }}</td>
+            <td class="text-end text-success fw-bold">₹{{ "{:,.2f}".format(r.net|float) }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.pf|float) }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.esi|float) }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.pt|float) }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.tds|float) }}</td>
+            <td class="text-end text-secondary fw-bold">₹{{ "{:,.2f}".format(r.employer_cost|float) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="9" class="text-center text-muted py-5">No data for selected filters.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% else %}
+      {# Monthly Summary #}
+      <table class="table table-hover table-sm align-middle mb-0" style="font-size:.85rem; white-space:nowrap;">
+        <thead class="bg-light sticky-top">
+          <tr>
+            <th>Emp ID</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Month / FY</th>
+            <th class="text-end">Basic</th>
+            <th class="text-end">Gross</th>
+            <th class="text-end">Emp PF</th>
+            <th class="text-end">ESI</th>
+            <th class="text-end">PT</th>
+            <th class="text-end">TDS</th>
+            <th class="text-end text-success fw-bold">Net</th>
+            <th class="text-end">Employer Cost</th>
+            <th class="text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td class="text-primary fw-semibold font-monospace">{{ r.employee_id }}</td>
+            <td>{{ r.get('name', r.employee_id) }}</td>
+            <td>{{ r.get('department', '') }}</td>
+            <td>{{ r.month }} / {{ r.financial_year }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.basic_salary|default(0)|float) }}</td>
+            <td class="text-end fw-semibold">₹{{ "{:,.2f}".format(r.gross_salary|default(0)|float) }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.employee_pf|default(0)|float) }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.esi_employee|default(0)|float) }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.professional_tax|default(0)|float) }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.tds|default(0)|float) }}</td>
+            <td class="text-end fw-bold text-success">₹{{ "{:,.2f}".format(r.net_salary|default(0)|float) }}</td>
+            <td class="text-end">₹{{ "{:,.2f}".format(r.employer_cost|default(0)|float) }}</td>
+            <td class="text-center">
+              <span class="badge {% if r.payroll_status == 'LOCKED' %}bg-danger{% else %}bg-success{% endif %}">{{ r.payroll_status }}</span>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="13" class="text-center text-muted py-5">No processed payroll records found for the selected filters.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="text-muted small mt-2 text-end">{{ rows|length }} record(s) found.</div>
+
+<script>
+function exportReport(fmt) {
+  const params = new URLSearchParams(window.location.search);
+  params.set('format', fmt);
+  params.set('report', '{{ report_type }}');
+  window.location.href = '/hr/reports/export?' + params.toString();
+}
+</script>
+
+<style>
+@media print {
+  nav, header, .mb-3.d-flex, .card.mb-3, .btn { display: none !important; }
+  .table-responsive { max-height: none !important; overflow: visible !important; }
+  .table { font-size: 0.7rem !important; }
+}
+</style>
+{% endblock %}

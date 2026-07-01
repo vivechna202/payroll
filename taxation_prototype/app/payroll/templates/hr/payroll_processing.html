@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Payroll Processing – TaxPro HRMS{% endblock %}
+{% block page_title %}Payroll Processing{% endblock %}
+{% block page_subtitle %}Run and review monthly payroll · FY {{ fy }}{% endblock %}
+
+{% block content %}
+
+<!-- Month/Year Selector + Run Button -->
+<div class="card mb-6">
+  <div class="flex flex-wrap items-end gap-4">
+    <div>
+      <label class="form-label">Month</label>
+      <select id="sel-month" class="form-input w-40">
+        {% set month_names = ['January','February','March','April','May','June','July','August','September','October','November','December'] %}
+        {% for i in range(1, 13) %}
+        <option value="{{ i }}" {% if selected_month == i|string %}selected{% endif %}>{{ month_names[i-1] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Financial Year</label>
+      <input type="text" class="form-input w-32" style="background-color: var(--input-bg);" value="{{ fy }}" readonly />
+    </div>
+    <form method="POST" action="{{ url_for('hr.payroll_processing') }}" id="payroll-form">
+      <input type="hidden" name="month" id="form-month" value="{{ selected_month }}" />
+      <input type="hidden" name="fy" id="form-fy" value="{{ fy }}" />
+      <button type="submit" id="run-payroll-btn" class="btn-primary">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Run Payroll
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Summary Tiles -->
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+  <div class="stat-card" style="background-color: var(--badge-info-bg);">
+    <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Total Gross</p>
+    <p class="text-2xl font-bold" style="color: var(--text-primary);">₹ {{ summary.total_gross }}</p>
+    <p class="text-xs mt-1" style="color: var(--badge-warning-text);">{{ summary.employee_count }} employees</p>
+  </div>
+  <div class="stat-card" style="background-color: var(--badge-info-bg);">
+    <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Total PF</p>
+    <p class="text-2xl font-bold" style="color: var(--badge-info-text);">₹ {{ summary.total_pf }}</p>
+    <p class="text-xs mt-1" style="color: var(--text-muted);">Employee contribution</p>
+  </div>
+  <div class="stat-card" style="background-color: var(--badge-info-bg);">
+    <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Professional Tax</p>
+    <p class="text-2xl font-bold" style="color: var(--badge-info-text);">₹ {{ summary.total_pt }}</p>
+    <p class="text-xs mt-1" style="color: var(--text-muted);">State tax</p>
+  </div>
+  <div class="stat-card" style="background-color: var(--badge-warning-bg);">
+    <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Total TDS</p>
+    <p class="text-2xl font-bold" style="color: var(--badge-warning-text);">₹ {{ summary.total_tds }}</p>
+    <p class="text-xs mt-1" style="color: var(--text-muted);">Income tax deducted</p>
+  </div>
+  <div class="stat-card" style="background-color: var(--badge-success-bg);">
+    <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Total Net Pay</p>
+    <p class="text-2xl font-bold" style="color: var(--badge-success-text);">₹ {{ summary.total_net }}</p>
+    <p class="text-xs mt-1" style="color: var(--text-muted);">After all deductions</p>
+  </div>
+</div>
+
+<!-- Employee Payroll Table -->
+<div class="card">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="section-title">Employee Payroll Register</h2>
+    <div class="flex gap-2">
+      <button disabled class="btn-secondary text-xs">Export CSV</button>
+      <button disabled class="btn-secondary text-xs">Export PDF</button>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr style="border-bottom: 1px solid var(--border-color);">
+          <th class="th-cell">Emp ID</th>
+          <th class="th-cell">Name</th>
+          <th class="th-cell">Department</th>
+          <th class="th-cell">Basic</th>
+          <th class="th-cell">HRA</th>
+          <th class="th-cell">Special</th>
+          <th class="th-cell">Other</th>
+          <th class="th-cell">Gross Base</th>
+          <th class="th-cell text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody style="border-top: 1px solid var(--border-color);">
+        {% for emp in employees %}
+        <tr class="transition-colors" style="border-bottom: 1px solid var(--border-color);" onmouseover="this.style.backgroundColor='var(--hover-bg)'" onmouseout="this.style.backgroundColor='transparent'">
+          <td class="td-cell font-mono text-xs" style="color: var(--badge-info-text);">{{ emp.employee_id }}</td>
+          <td class="td-cell font-medium" style="color: var(--text-primary);">{{ emp.name }}</td>
+          <td class="td-cell text-xs" style="color: var(--text-muted);">{{ emp.department }}</td>
+          <td class="td-cell" style="color: var(--text-secondary);">₹ {{ emp.basic_salary }}</td>
+          <td class="td-cell" style="color: var(--text-muted);">₹ {{ emp.hra }}</td>
+          <td class="td-cell" style="color: var(--text-muted);">₹ {{ emp.special_allowance }}</td>
+          <td class="td-cell" style="color: var(--text-muted);">₹ {{ emp.other_allowances }}</td>
+          <td class="td-cell font-medium" style="color: var(--badge-success-text);">₹ {{ emp.gross_monthly }}</td>
+          <td class="td-cell text-right">
+            <a href="{{ url_for('hr.payroll_edit', employee_id=emp.employee_id) }}" class="btn-secondary text-xs py-1 px-3">Edit Salary</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="td-cell text-center py-6" style="color: var(--text-muted);">No active employees found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('sel-month').addEventListener('change', function() {
+    document.getElementById('form-month').value = this.value;
+  });
+</script>
+{% endblock %}

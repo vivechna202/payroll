@@ -1,0 +1,148 @@
+/**
+ * main.js – TaxPro HRMS client-side utilities (Phase 1)
+ *
+ * Phase 1: Minimal JS for UX polish only.
+ * Phase 2: Add Chart.js for TDS timeline graphs,
+ *          AJAX for payroll polling, WebSocket for real-time notifications.
+ */
+
+'use strict';
+
+// ── Theme Management ───────────────────────────────────────
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  const html = document.documentElement;
+  
+  if (savedTheme === 'light') {
+    html.setAttribute('data-theme', 'light');
+  } else {
+    html.setAttribute('data-theme', 'dark');
+  }
+  
+  updateThemeIcons(savedTheme);
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const currentTheme = html.getAttribute('data-theme') || 'dark';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateThemeIcons(newTheme);
+}
+
+function updateThemeIcons(theme) {
+  const sunIcon = document.getElementById('theme-icon-sun');
+  const moonIcon = document.getElementById('theme-icon-moon');
+  
+  if (sunIcon && moonIcon) {
+    if (theme === 'light') {
+      sunIcon.classList.remove('hidden');
+      moonIcon.classList.add('hidden');
+    } else {
+      sunIcon.classList.add('hidden');
+      moonIcon.classList.remove('hidden');
+    }
+  }
+}
+
+// ── Auto-dismiss flash messages ────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  
+  // Initialize theme
+  initTheme();
+  
+  // Theme toggle button
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
+
+  // Dismiss flash alerts after 5 seconds
+  const flashes = document.querySelectorAll('[class*="bg-emerald-9"], [class*="bg-red-9"], [class*="bg-amber-9"], [class*="bg-brand-9"]');
+  flashes.forEach(el => {
+    if (el.closest('main') || el.closest('.px-6')) {
+      setTimeout(() => {
+        el.style.transition = 'opacity 0.5s ease';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 500);
+      }, 5000);
+    }
+  });
+
+  // ── Confirm on destructive actions ──────────────────────
+  document.querySelectorAll('[data-confirm]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      if (!confirm(btn.dataset.confirm)) e.preventDefault();
+    });
+  });
+
+  // ── Number input: format with commas on blur ────────────
+  document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('wheel', e => e.preventDefault()); // disable scroll
+  });
+
+  // ── Active nav link highlight (fallback) ────────────────
+  const currentPath = window.location.pathname;
+  document.querySelectorAll('.nav-link').forEach(link => {
+    if (link.getAttribute('href') === currentPath) {
+      link.classList.add('nav-link-active');
+    }
+  });
+  // ── Dropdown helper ───────────────────────────────────
+  const initPortalDropdown = (toggleId, childrenId, iconId) => {
+    const toggle = document.getElementById(toggleId);
+    const children = document.getElementById(childrenId);
+    const icon = document.getElementById(iconId);
+
+    if (!toggle || !children || !icon) return;
+
+    const setState = expanded => {
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      children.style.maxHeight = expanded ? `${children.scrollHeight}px` : '0';
+      icon.style.transform = expanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+    };
+
+    const activeChild = children.querySelector('.nav-link-active');
+    setState(activeChild !== null);
+
+    toggle.addEventListener('click', () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      setState(!expanded);
+    });
+
+    window.addEventListener('resize', () => {
+      if (toggle.getAttribute('aria-expanded') === 'true') {
+        children.style.maxHeight = `${children.scrollHeight}px`;
+      }
+    });
+  };
+
+  initPortalDropdown('hr-portal-toggle', 'hr-portal-children', 'hr-portal-icon');
+  initPortalDropdown('employee-portal-toggle', 'employee-portal-children', 'employee-portal-icon');
+  initPortalDropdown('manager-portal-toggle', 'manager-portal-children', 'manager-portal-icon');
+
+  // ── Form loading state ──────────────────────────────────
+  document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', () => {
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) {
+        const originalText = btn.textContent;
+        const originalOpacity = btn.style.opacity;
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.textContent = 'Processing…';
+
+        // Reset button state after 30 seconds as a safety net
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.style.opacity = originalOpacity;
+          btn.textContent = originalText;
+        }, 30000);
+      }
+    });
+  });
+
+  console.log('TaxPro HRMS · Phase 1 Prototype · JS loaded');
+});

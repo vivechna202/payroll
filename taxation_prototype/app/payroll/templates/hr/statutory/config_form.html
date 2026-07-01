@@ -1,0 +1,441 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if config %}Edit{% else %}Create{% endif %} Statutory Configuration – TaxPro HRMS{% endblock %}
+{% block page_title %}{% if config %}Edit{% else %}Create{% endif %} Statutory Configuration{% endblock %}
+{% block page_subtitle %}Define compliance rules and contribution parameters for statutory deductions{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* ── Config Form – Theme-aware styles ─────────────────────── */
+
+  /* Outer form wrapper */
+  .cf-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 2rem;
+  }
+
+  /* Sub-section card (PF/ESI/PT params) */
+  .cf-sub-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 0.875rem;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .cf-sub-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin: 0 0 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .cf-sub-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--border-color);
+  }
+
+  /* Section divider */
+  .cf-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 1.75rem 0;
+  }
+
+  /* Two-column grid */
+  .cf-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  @media (max-width: 640px) {
+    .cf-grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* Three-column grid */
+  .cf-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.25rem;
+  }
+  @media (max-width: 768px) {
+    .cf-grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    .cf-grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* Four-column grid for PF rates */
+  .cf-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+  }
+  @media (max-width: 900px) {
+    .cf-grid-4 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    .cf-grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* Field group */
+  .cf-field { display: flex; flex-direction: column; gap: 0.375rem; }
+
+  /* Label */
+  .cf-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  /* Input / Select / Textarea */
+  .cf-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.625rem;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .cf-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+  .cf-input::placeholder { color: var(--text-muted); }
+  .cf-input:disabled,
+  .cf-input[readonly] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  select.cf-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.25rem;
+    cursor: pointer;
+  }
+  textarea.cf-input {
+    resize: vertical;
+    min-height: 10rem;
+    font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+
+  /* Hint text */
+  .cf-hint {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+    line-height: 1.5;
+  }
+
+  /* ── Checkbox row ───────────────────────────────────────── */
+  .cf-check-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.625rem;
+    background-color: var(--input-bg);
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+    height: 100%;
+  }
+  .cf-check-row:hover {
+    border-color: #6366f1;
+    background-color: rgba(99, 102, 241, 0.04);
+  }
+
+  .cf-check-input {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 0.25rem;
+    accent-color: #4f46e5;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .cf-check-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  /* ── Switches ────────────────────────────────────────────── */
+  .cf-switch-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* ── Action buttons ─────────────────────────────────────── */
+  .cf-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .cf-btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-color);
+    background-color: transparent;
+    color: var(--text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+  }
+  .cf-btn-cancel:hover {
+    border-color: var(--text-muted);
+    color: var(--text-primary);
+    background-color: var(--hover-bg);
+  }
+
+  /* Section heading inside params */
+  .cf-params-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="cf-card">
+  <form method="POST">
+
+    <!-- ── Section 1: Core Configuration ──────────────────── -->
+    <div class="cf-sub-title"><i class="bi bi-sliders"></i> Core Configuration</div>
+
+    <div class="cf-grid-2">
+
+      <!-- Rule Type -->
+      <div class="cf-field">
+        <label class="cf-label" for="ruleTypeSelect">Rule Type</label>
+        <select name="rule_type" class="cf-input" id="ruleTypeSelect"
+                {% if config %}disabled{% endif %} required>
+          <option value="PF"  {% if config and config.rule_type == 'PF'  %}selected{% endif %}>Provident Fund (PF)</option>
+          <option value="ESI" {% if config and config.rule_type == 'ESI' %}selected{% endif %}>Employee State Insurance (ESI)</option>
+          <option value="PT"  {% if config and config.rule_type == 'PT'  %}selected{% endif %}>Professional Tax (PT)</option>
+          <option value="LWF" {% if config and config.rule_type == 'LWF' %}selected{% endif %}>Labour Welfare Fund (LWF)</option>
+        </select>
+        {% if config %}
+        <input type="hidden" name="rule_type" value="{{ config.rule_type }}">
+        {% endif %}
+      </div>
+
+      <!-- State -->
+      <div class="cf-field">
+        <label class="cf-label" for="stateInput">State</label>
+        <input type="text" id="stateInput" name="state" class="cf-input"
+               value="{{ config.state if config else 'Delhi' }}"
+               {% if config %}readonly{% endif %} required>
+      </div>
+
+      <!-- Effective From -->
+      <div class="cf-field">
+        <label class="cf-label" for="effectiveFrom">Effective From</label>
+        <input type="date" id="effectiveFrom" name="effective_from" class="cf-input"
+               value="{{ config.effective_from if config else '' }}" required>
+      </div>
+
+      <!-- Enabled -->
+      <div class="cf-field">
+        <label class="cf-label">Active Status</label>
+        <label class="cf-check-row" for="enabledCheck">
+          <input class="cf-check-input" type="checkbox"
+                 name="enabled" value="Yes" id="enabledCheck"
+                 {% if config and config.enabled == 'Yes' %}checked{% endif %}>
+          <span class="cf-check-label">Enabled – Apply this rule in payroll processing</span>
+        </label>
+      </div>
+
+    </div>
+
+    <!-- ── PF Parameters ────────────────────────────────── -->
+    <div id="pfParams" class="param-section" style="display:none;">
+      <div class="cf-divider"></div>
+      <div class="cf-sub-title"><i class="bi bi-shield-fill-check"></i> PF Parameters</div>
+
+      <!-- Rates row: 4 columns -->
+      <div class="cf-grid-4" style="margin-bottom:1.25rem;">
+        <div class="cf-field">
+          <label class="cf-label" for="pfEmpRate">Employee Rate (%)</label>
+          <input type="number" step="0.01" id="pfEmpRate"
+                 name="pf_employee_rate" class="cf-input"
+                 value="{{ config.parameters.employee_rate if config and config.rule_type == 'PF' else 12.0 }}">
+        </div>
+        <div class="cf-field">
+          <label class="cf-label" for="pfErRate">Employer Rate (%)</label>
+          <input type="number" step="0.01" id="pfErRate"
+                 name="pf_employer_rate" class="cf-input"
+                 value="{{ config.parameters.employer_rate if config and config.rule_type == 'PF' else 12.0 }}">
+        </div>
+        <div class="cf-field">
+          <label class="cf-label" for="pfEpsRate">EPS Rate (%)</label>
+          <input type="number" step="0.01" id="pfEpsRate"
+                 name="pf_eps_rate" class="cf-input"
+                 value="{{ config.parameters.eps_rate if config and config.rule_type == 'PF' else 8.33 }}">
+        </div>
+        <div class="cf-field">
+          <label class="cf-label" for="pfWageCeil">Wage Ceiling (₹)</label>
+          <input type="number" step="0.01" id="pfWageCeil"
+                 name="pf_wage_ceiling" class="cf-input"
+                 value="{{ config.parameters.wage_ceiling if config and config.rule_type == 'PF' else 15000.0 }}">
+        </div>
+      </div>
+
+      <!-- Toggle switches row -->
+      <div class="cf-grid-2">
+        <div class="cf-field">
+          <label class="cf-label">Wage Ceiling</label>
+          <label class="cf-check-row" for="pfRespectCheck">
+            <input class="cf-check-input" type="checkbox"
+                   name="pf_respect_wage_ceiling" id="pfRespectCheck"
+                   {% if not config or (config.rule_type == 'PF' and config.parameters.get('respect_wage_ceiling', True)) %}checked{% endif %}>
+            <span class="cf-check-label">Respect Wage Ceiling</span>
+          </label>
+        </div>
+        <div class="cf-field">
+          <label class="cf-label">EPS</label>
+          <label class="cf-check-row" for="pfEpsCheck">
+            <input class="cf-check-input" type="checkbox"
+                   name="pf_enable_eps_split" id="pfEpsCheck"
+                   {% if not config or (config.rule_type == 'PF' and config.parameters.get('enable_eps_split', True)) %}checked{% endif %}>
+            <span class="cf-check-label">Enable EPS Split</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ESI Parameters ───────────────────────────────── -->
+    <div id="esiParams" class="param-section" style="display:none;">
+      <div class="cf-divider"></div>
+      <div class="cf-sub-title"><i class="bi bi-hospital-fill"></i> ESI Parameters</div>
+
+      <div class="cf-grid-3">
+        <div class="cf-field">
+          <label class="cf-label" for="esiEmpRate">Employee Rate (%)</label>
+          <input type="number" step="0.01" id="esiEmpRate"
+                 name="esi_employee_rate" class="cf-input"
+                 value="{{ config.parameters.employee_rate if config and config.rule_type == 'ESI' else 0.75 }}">
+        </div>
+        <div class="cf-field">
+          <label class="cf-label" for="esiErRate">Employer Rate (%)</label>
+          <input type="number" step="0.01" id="esiErRate"
+                 name="esi_employer_rate" class="cf-input"
+                 value="{{ config.parameters.employer_rate if config and config.rule_type == 'ESI' else 3.25 }}">
+        </div>
+        <div class="cf-field">
+          <label class="cf-label" for="esiWageCeil">Wage Ceiling (₹)</label>
+          <input type="number" step="0.01" id="esiWageCeil"
+                 name="esi_wage_ceiling" class="cf-input"
+                 value="{{ config.parameters.wage_ceiling if config and config.rule_type == 'ESI' else 21000.0 }}">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PT / LWF Raw JSON ────────────────────────────── -->
+    <div id="rawParams" class="param-section" style="display:none;">
+      <div class="cf-divider"></div>
+      <div class="cf-sub-title"><i class="bi bi-braces"></i> Configuration Details (JSON)</div>
+
+      <div class="cf-field">
+        <label class="cf-label" for="rawParamsTextarea">Parameters (Slabs, Rules, etc.)</label>
+        <textarea id="rawParamsTextarea"
+                  name="raw_parameters"
+                  class="cf-input"
+                  rows="8">{% if config and config.rule_type in ['PT', 'LWF'] %}{{ config.parameters | tojson(indent=2) }}{% elif not config %}{}{% endif %}</textarea>
+        <span class="cf-hint">
+          <i class="bi bi-info-circle"></i>
+          Provide JSON-formatted parameters for PT slabs or LWF rules.
+        </span>
+      </div>
+    </div>
+
+    <!-- ── Action Buttons ───────────────────────────────── -->
+    <div class="cf-actions">
+      <button type="submit" class="btn-primary">
+        <i class="bi bi-check-lg"></i> Save Configuration
+      </button>
+      <a href="{{ url_for('statutory.list_configs') }}" class="cf-btn-cancel">
+        <i class="bi bi-x-lg"></i> Cancel
+      </a>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const select = document.getElementById("ruleTypeSelect");
+
+    function updateForms() {
+      document.querySelectorAll('.param-section').forEach(el => el.style.display = 'none');
+      const val = select.value;
+      if (val === 'PF') {
+        document.getElementById('pfParams').style.display = 'block';
+      } else if (val === 'ESI') {
+        document.getElementById('esiParams').style.display = 'block';
+      } else if (val === 'PT' || val === 'LWF') {
+        document.getElementById('rawParams').style.display = 'block';
+        const ta = document.querySelector('textarea[name="raw_parameters"]');
+        if (ta.value.trim() === '{}' || ta.value.trim() === '') {
+          if (val === 'PT') {
+            ta.value = JSON.stringify({
+              "slabs": [
+                { "min": 0,     "max": 10000,  "amount": 0 },
+                { "min": 10000, "max": 999999, "amount": 200, "feb_amount": 300 }
+              ]
+            }, null, 2);
+          } else if (val === 'LWF') {
+            ta.value = JSON.stringify({
+              "employee_contribution": 10,
+              "employer_contribution": 20,
+              "deduction_months": [6, 12]
+            }, null, 2);
+          }
+        }
+      }
+    }
+
+    select.addEventListener('change', updateForms);
+    updateForms();
+  });
+</script>
+{% endblock %}

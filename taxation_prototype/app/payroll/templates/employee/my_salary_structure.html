@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}My Salary Structure – ESS Portal{% endblock %}
+{% block page_title %}My Salary Structure{% endblock %}
+{% block page_subtitle %}Earnings and deductions structure details{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* ── My Salary Structure – Theme-aware styles ──────────────────────── */
+
+    /* Back Button */
+    .mss-btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 0.625rem;
+        border: 1px solid var(--border-color);
+        background-color: transparent;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+        cursor: pointer;
+        margin-bottom: 1.5rem;
+    }
+    .mss-btn-back:hover {
+        border-color: var(--text-muted);
+        color: var(--text-primary);
+        background-color: var(--hover-bg);
+    }
+
+    /* Container Cards */
+    .mss-card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .mss-card-header {
+        padding: 1.25rem 1.5rem 0.5rem;
+    }
+    .mss-card-title {
+        font-size: 1.125rem;
+        font-weight: 800;
+        margin: 0;
+        color: #0f172a;
+    }
+    [data-theme="dark"] .mss-card-title { color: #f1f5f9; }
+
+    .mss-card-body { padding: 1.5rem; }
+
+    /* Employment Info Grid */
+    .mss-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+    @media (max-width: 768px) { .mss-info-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .mss-info-grid { grid-template-columns: 1fr; } }
+
+    .mss-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .mss-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #475569;
+    }
+    [data-theme="dark"] .mss-label { color: #94a3b8; }
+
+    .mss-value {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    [data-theme="dark"] .mss-value { color: #f1f5f9; }
+
+    .mss-value-mono {
+        font-family: ui-monospace, 'Cascadia Code', monospace;
+        color: var(--alert-info-text);
+        font-size: 1.125rem;
+        font-weight: 800;
+    }
+
+    /* Data Table */
+    .mss-table-wrapper {
+        overflow-x: auto;
+    }
+    .mss-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+    
+    .mss-thead {
+        background-color: var(--bg-surface);
+        border-bottom: 1px solid var(--border-color);
+    }
+    .mss-th {
+        padding: 1rem 1.5rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #475569;
+        text-align: left;
+        white-space: nowrap;
+    }
+    [data-theme="dark"] .mss-th { color: #94a3b8; }
+    
+    .mss-th.text-right, .mss-td.text-right {
+        text-align: right;
+    }
+
+    .mss-tbody tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.15s;
+    }
+    .mss-tbody tr:last-child {
+        border-bottom: none;
+    }
+    .mss-tbody tr:hover {
+        background-color: var(--hover-bg);
+    }
+
+    .mss-td {
+        padding: 1.125rem 1.5rem;
+        color: #0f172a;
+        font-weight: 600;
+        vertical-align: middle;
+    }
+    [data-theme="dark"] .mss-td { color: #f1f5f9; }
+
+    /* Totals Row */
+    .mss-tr-total {
+        border-top: 2px solid var(--border-color);
+        background-color: rgba(99, 102, 241, 0.04);
+    }
+    [data-theme="dark"] .mss-tr-total {
+        background-color: rgba(99, 102, 241, 0.1);
+    }
+    .mss-tr-total .mss-td {
+        font-weight: 800;
+        color: var(--alert-info-text);
+        font-size: 0.9375rem;
+    }
+    [data-theme="dark"] .mss-tr-total .mss-td {
+        color: #818cf8; /* indigo-400 */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('ess.my_dashboard') }}" class="mss-btn-back">
+    <i class="bi bi-arrow-left"></i> Back to Dashboard
+</a>
+
+<div class="row g-4">
+    <!-- Structure Meta (Top Card) -->
+    <div class="col-12">
+        <div class="mss-card">
+            <div class="mss-card-header">
+                <h2 class="mss-card-title">Employment Info</h2>
+            </div>
+            <div class="mss-card-body">
+                <div class="mss-info-grid">
+                    <div class="mss-field">
+                        <span class="mss-label">Name</span>
+                        <span class="mss-value">{{ employee.name }}</span>
+                    </div>
+                    <div class="mss-field">
+                        <span class="mss-label">Designation</span>
+                        <span class="mss-value">{{ employee.designation }}</span>
+                    </div>
+                    <div class="mss-field">
+                        <span class="mss-label">Department</span>
+                        <span class="mss-value">{{ employee.department }}</span>
+                    </div>
+                    {% if active_contract %}
+                    <div class="mss-field">
+                        <span class="mss-label">Structure Type</span>
+                        <span class="mss-value">{{ active_contract.salary_structure_type }}</span>
+                    </div>
+                    <div class="mss-field" style="grid-column: span 2;">
+                        <span class="mss-label">Gross Salary</span>
+                        <span class="mss-value mss-value-mono">₹{{ "{:,.2f}".format(active_contract.gross_salary|float) }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Component Details (Bottom Card) -->
+    <div class="col-12">
+        <div class="mss-card">
+            <div class="mss-card-header">
+                <h2 class="mss-card-title">Salary Components Breakdown</h2>
+            </div>
+            <div class="mss-card-body" style="padding: 0;">
+                <div class="mss-table-wrapper">
+                    <table class="mss-table">
+                        <thead class="mss-thead">
+                            <tr>
+                                <th class="mss-th">Component Name</th>
+                                <th class="mss-th text-right">Monthly Amount</th>
+                                <th class="mss-th text-right">Annualized Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody class="mss-tbody">
+                            {% if salary_structure %}
+                            {% set basic = salary_structure.basic_salary|default(0)|float %}
+                            {% set hra = salary_structure.hra|default(0)|float %}
+                            {% set special = salary_structure.special_allowance|default(0)|float %}
+                            {% set other = salary_structure.other_allowances|default(0)|float %}
+                            {% set gross = basic + hra + special + other %}
+                            
+                            <tr>
+                                <td class="mss-td">Basic Salary</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(basic) }}</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(basic * 12) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="mss-td">House Rent Allowance (HRA)</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(hra) }}</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(hra * 12) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="mss-td">Special Allowance</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(special) }}</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(special * 12) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="mss-td">Other Allowances</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(other) }}</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(other * 12) }}</td>
+                            </tr>
+                            <tr class="mss-tr-total">
+                                <td class="mss-td">Total Gross Salary</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(gross) }}</td>
+                                <td class="mss-td text-right">₹{{ "{:,.2f}".format(gross * 12) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="mss-td" style="text-align: center; color: var(--text-muted); padding: 3rem 0;">No structure mapped.</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% set is_edit = component is not none %}
+{% block title %}{{ 'Edit' if is_edit else 'New' }} Salary Component – TaxPro HRMS{% endblock %}
+{% block page_title %}{{ 'Edit Component' if is_edit else 'New Salary Component' }}{% endblock %}
+{% block page_subtitle %}{{ component.name if is_edit else 'Define a new earning or deduction component' }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs" style="color: var(--text-muted);">
+    <a href="{{ url_for('salary.list_components') }}" class="hover:underline" style="color:#818cf8;">Salary Components</a>
+    <span>/</span>
+    <span>{{ 'Edit: ' + component.name if is_edit else 'New Component' }}</span>
+  </div>
+
+  <form method="POST" id="component-form" class="space-y-5">
+    <!-- ── Basic Info ────────────────────────────────────────── -->
+    <div class="rounded-2xl p-6 space-y-5" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+      <h2 class="text-sm font-bold uppercase tracking-widest" style="color: var(--text-muted);">Component Info</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Name -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">
+            Component Name <span style="color:#f87171;">*</span>
+          </label>
+          <input type="text" name="name" id="field-name" required
+                 value="{{ component.name if is_edit else '' }}"
+                 placeholder="e.g. House Rent Allowance"
+                 class="w-full px-3 py-2.5 rounded-xl text-sm outline-none focus:ring-2"
+                 style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary); --tw-ring-color:#6366f1;">
+        </div>
+
+        <!-- Code -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">
+            Code (used in formulas) <span style="color:#f87171;">*</span>
+          </label>
+          <input type="text" name="code" id="field-code" required
+                 value="{{ component.code if is_edit else '' }}"
+                 placeholder="e.g. HRA"
+                 maxlength="20"
+                 oninput="this.value = this.value.toUpperCase().replace(/\s/g,'')"
+                 class="w-full px-3 py-2.5 rounded-xl text-sm font-mono outline-none focus:ring-2"
+                 style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+        </div>
+
+        <!-- Category -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Category <span style="color:#f87171;">*</span></label>
+          <select name="category" id="field-category"
+                  class="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                  style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+            <option value="Earning"   {% if not is_edit or component.category == 'Earning' %}selected{% endif %}>Earning</option>
+            <option value="Deduction" {% if is_edit and component.category == 'Deduction' %}selected{% endif %}>Deduction</option>
+          </select>
+        </div>
+
+        <!-- Taxable -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Taxable</label>
+          <select name="taxable"
+                  class="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                  style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+            <option value="Yes" {% if is_edit and component.taxable == 'Yes' %}selected{% endif %}>Yes – taxable income</option>
+            <option value="No"  {% if not is_edit or component.taxable == 'No' %}selected{% endif %}>No – exempt / non-taxable</option>
+          </select>
+        </div>
+
+        <!-- Sequence -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">
+            Sequence / Order
+          </label>
+          <input type="number" name="sequence" min="1" max="999"
+                 value="{{ component.sequence if is_edit else '100' }}"
+                 class="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                 style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+          <p class="text-xs" style="color: var(--text-muted);">Lower numbers are computed first (e.g. Basic=10, HRA=20)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Computation ───────────────────────────────────────── -->
+    <div class="rounded-2xl p-6 space-y-5" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+      <h2 class="text-sm font-bold uppercase tracking-widest" style="color: var(--text-muted);">Computation</h2>
+
+      <!-- Type selector tabs -->
+      <div class="flex gap-2 p-1 rounded-xl" style="background-color: var(--input-bg); border: 1px solid var(--border-color);">
+        {% for ctype in ['Fixed', 'Percentage', 'Formula'] %}
+        <button type="button" data-ctype="{{ ctype }}"
+                class="ctype-tab flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200"
+                style="color: var(--text-secondary);">
+          {{ ctype }}
+        </button>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="computation_type" id="computation_type_input"
+             value="{{ component.computation_type if is_edit else 'Fixed' }}">
+
+      <!-- Fixed fields -->
+      <div id="panel-Fixed" class="ctype-panel space-y-3">
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Fixed Amount (₹)</label>
+          <input type="number" name="amount" min="0" step="0.01"
+                 value="{{ component.amount if is_edit else '0' }}"
+                 class="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                 style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+          <p class="text-xs" style="color: var(--text-muted);">Set to 0 if the amount will be overridden per employee contract.</p>
+        </div>
+      </div>
+
+      <!-- Percentage fields -->
+      <div id="panel-Percentage" class="ctype-panel space-y-3 hidden">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Percentage (%)</label>
+            <input type="number" name="percentage" min="0" max="100" step="0.01"
+                   value="{{ component.percentage if is_edit else '0' }}"
+                   class="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                   style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Percentage Of (code)</label>
+            <select name="percentage_of"
+                    class="w-full px-3 py-2.5 rounded-xl text-sm font-mono outline-none"
+                    style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+              <option value="">— select base —</option>
+              {% for code in all_codes %}
+              <option value="{{ code }}" {% if is_edit and component.percentage_of == code %}selected{% endif %}>{{ code }}</option>
+              {% endfor %}
+              <option value="BASIC"  {% if is_edit and component.percentage_of == 'BASIC' %}selected{% endif %}>BASIC</option>
+              <option value="GROSS"  {% if is_edit and component.percentage_of == 'GROSS' %}selected{% endif %}>GROSS</option>
+              <option value="NET"    {% if is_edit and component.percentage_of == 'NET' %}selected{% endif %}>NET</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-xs"
+             style="background-color: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #a5b4fc;">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Example: HRA = 40% of BASIC → enter 40, select BASIC
+        </div>
+      </div>
+
+      <!-- Formula fields -->
+      <div id="panel-Formula" class="ctype-panel space-y-3 hidden">
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Formula Expression</label>
+          <textarea name="formula" rows="3"
+                    placeholder="e.g.  round(GROSS * 0.0075, 2) if GROSS <= 21000 else 0"
+                    class="w-full px-3 py-2.5 rounded-xl text-sm font-mono outline-none resize-y"
+                    style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">{{ component.formula if is_edit else '' }}</textarea>
+        </div>
+        <div class="rounded-xl p-3 space-y-1 text-xs" style="background-color: var(--table-header-bg); border: 1px solid var(--border-color);">
+          <p class="font-semibold" style="color: var(--text-secondary);">Available variables:</p>
+          <div class="flex flex-wrap gap-1.5 mt-1">
+            {% for code in all_codes %}
+            <code class="px-1.5 py-0.5 rounded text-xs" style="background-color: rgba(99,102,241,0.15); color: #a5b4fc;">{{ code }}</code>
+            {% endfor %}
+            <code class="px-1.5 py-0.5 rounded text-xs" style="background-color: rgba(16,185,129,0.15); color: #34d399;">BASIC</code>
+            <code class="px-1.5 py-0.5 rounded text-xs" style="background-color: rgba(16,185,129,0.15); color: #34d399;">GROSS</code>
+            <code class="px-1.5 py-0.5 rounded text-xs" style="background-color: rgba(16,185,129,0.15); color: #34d399;">NET</code>
+          </div>
+          <p class="mt-2" style="color: var(--text-muted);">Allowed built-ins: <code>round</code>, <code>abs</code>, <code>min</code>, <code>max</code>, <code>int</code>, <code>float</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Description ─────────────────────────────────────────── -->
+    <div class="rounded-2xl p-6 space-y-3" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+      <label class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Description / Notes</label>
+      <textarea name="description" rows="2"
+                placeholder="Optional notes about this component…"
+                class="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-y"
+                style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">{{ component.description if is_edit else '' }}</textarea>
+    </div>
+
+    <!-- ── Actions ───────────────────────────────────────────── -->
+    <div class="flex justify-end gap-3">
+      <a href="{{ url_for('salary.view_component', component_id=component.component_id) if is_edit else url_for('salary.list_components') }}"
+         class="px-5 py-2.5 rounded-xl text-sm font-medium"
+         style="border: 1px solid var(--border-color); color: var(--text-secondary);">
+        Cancel
+      </a>
+      <button type="submit"
+              class="px-6 py-2.5 rounded-xl text-sm font-semibold text-white shadow transition-all duration-200 hover:scale-105"
+              style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+        {{ 'Save Changes' if is_edit else 'Create Component' }}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const initial = document.getElementById('computation_type_input').value || 'Fixed';
+  const tabs    = document.querySelectorAll('.ctype-tab');
+  const panels  = document.querySelectorAll('.ctype-panel');
+  const hidden  = document.getElementById('computation_type_input');
+
+  function switchType(type) {
+    hidden.value = type;
+    tabs.forEach(t => {
+      const active = t.dataset.ctype === type;
+      t.style.backgroundColor = active ? '#6366f1' : 'transparent';
+      t.style.color = active ? '#fff' : 'var(--text-secondary)';
+      t.style.boxShadow = active ? '0 2px 8px rgba(99,102,241,0.4)' : 'none';
+    });
+    panels.forEach(p => {
+      p.classList.toggle('hidden', !p.id.endsWith(type));
+    });
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => switchType(t.dataset.ctype)));
+  switchType(initial);
+})();
+</script>
+{% endblock %}

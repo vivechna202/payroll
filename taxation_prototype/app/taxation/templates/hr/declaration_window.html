@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Declaration Window – TaxPro HRMS{% endblock %}
+{% block page_title %}Declaration Window Management{% endblock %}
+{% block page_subtitle %}Open and close investment declaration periods for employees{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Create Window Form -->
+  <div class="card">
+    <h2 class="section-title mb-5">Create New Window</h2>
+    <form method="POST" action="{{ url_for('hr.declaration_window') }}" class="space-y-4">
+
+      <div>
+        <label class="form-label">Financial Year</label>
+        <select name="fy" id="window-fy" class="form-input">
+          {% for fy_opt in ['2024-25', '2025-26', '2023-24'] %}
+          <option value="{{ fy_opt }}" {% if fy_opt == fy %}selected{% endif %}>{{ fy_opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label">Window Type</label>
+        <select name="window_type" id="window-type" class="form-input">
+          <option value="PROVISIONAL">Provisional Declaration (Apr–Jun)</option>
+          <option value="REVISED">Revised Declaration (Oct–Dec)</option>
+          <option value="FINAL">Final Declaration (Jan–Feb)</option>
+          <option value="PROOF_SUBMISSION">Proof Submission Window</option>
+          <option value="CUSTOM">Custom</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label">Start Date</label>
+        <input type="date" name="start_date" id="window-start" class="form-input" />
+      </div>
+
+      <div>
+        <label class="form-label">End Date</label>
+        <input type="date" name="end_date" id="window-end" class="form-input" />
+      </div>
+
+      <button type="submit" id="create-window-btn" class="btn-primary w-full">
+        Create Window
+      </button>
+    </form>
+
+
+  </div>
+
+  <!-- Windows Table -->
+  <div class="lg:col-span-2 card">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="section-title">Declaration Windows – FY {{ fy }}</h2>
+      <span class="pill-badge pill-blue">{{ windows | length }} Windows</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border">
+            <th class="th-cell">Window ID</th>
+            <th class="th-cell">Type</th>
+            <th class="th-cell">FY</th>
+            <th class="th-cell">Start Date</th>
+            <th class="th-cell">End Date</th>
+            <th class="th-cell">Created By</th>
+            <th class="th-cell">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border/50">
+          {% for w in windows %}
+          <tr class="hover:bg-white/[0.02] transition-colors">
+            <td class="td-cell font-mono text-xs text-brand-400">{{ w.window_id }}</td>
+            <td class="td-cell text-slate-300 text-xs">{{ w.window_type }}</td>
+            <td class="td-cell text-slate-400">{{ w.fy }}</td>
+            <td class="td-cell text-slate-400 text-xs">{{ w.start_date }}</td>
+            <td class="td-cell text-slate-400 text-xs">{{ w.end_date }}</td>
+            <td class="td-cell text-xs text-slate-500">{{ w.created_by }}</td>
+            <td class="td-cell">
+              <span class="pill-badge
+                {% if w.status == 'ACTIVE' %}pill-green
+                {% elif w.status == 'CLOSED' %}pill-red
+                {% else %}pill-blue{% endif %}">
+                {{ w.status }}
+              </span>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="td-cell text-center py-12">
+              <svg class="w-10 h-10 text-slate-700 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <p class="text-slate-400 font-medium text-sm">No declaration windows created yet</p>
+              <p class="text-slate-500 text-xs mt-1">Use the form on the left to create the first window.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Typical Schedule Reference -->
+    <div class="mt-5 p-4 rounded-xl bg-surface border border-border">
+      <p class="text-xs font-semibold text-slate-300 mb-3 uppercase tracking-wider">Typical FY Declaration Schedule</p>
+      <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+        <div class="flex gap-2"><span class="text-brand-400">Apr–Jun</span><span>Provisional Declaration</span></div>
+        <div class="flex gap-2"><span class="text-brand-400">Jul–Aug</span><span>Proof Submission Opens</span></div>
+        <div class="flex gap-2"><span class="text-brand-400">Oct–Dec</span><span>Revised Declaration</span></div>
+        <div class="flex gap-2"><span class="text-brand-400">Jan–Feb</span><span>Final Declaration</span></div>
+        <div class="flex gap-2"><span class="text-brand-400">Feb–Mar</span><span>Final Proof Submission</span></div>
+        <div class="flex gap-2"><span class="text-brand-400">Apr–May</span><span>Form 16 Generation</span></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

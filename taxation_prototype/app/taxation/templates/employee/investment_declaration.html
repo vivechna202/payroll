@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Investment Declaration – TaxPro HRMS{% endblock %}
+{% block page_title %}Investment Declaration{% endblock %}
+{% block page_subtitle %}FY {{ fy }} · Submit your tax-saving investments{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Declaration Form -->
+  <div class="lg:col-span-2 card">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="section-title">Submit Declaration – FY {{ fy }}</h2>
+      {% if existing_declaration %}
+      <span class="pill-badge {% if existing_declaration.status == 'SUBMITTED' %}pill-green{% else %}pill-blue{% endif %}">{{ existing_declaration.status }}</span>
+      {% else %}
+      <span class="pill-badge pill-amber">NEW</span>
+      {% endif %}
+    </div>
+
+    {% if not window_open %}
+    <div class="p-4 rounded-xl border mb-6" style="background-color: var(--alert-danger-bg); border-color: var(--alert-danger-border); color: var(--alert-danger-text);">
+      <strong>Window Closed:</strong> The declaration window for FY {{ fy }} is currently closed. You cannot modify your declaration.
+    </div>
+    {% elif existing_declaration and existing_declaration.status == 'SUBMITTED' %}
+    <div class="p-4 rounded-xl border mb-6" style="background-color: var(--alert-success-bg); border-color: var(--alert-success-border); color: var(--alert-success-text);">
+      <strong>Submitted:</strong> Your declaration for FY {{ fy }} is submitted and locked. Contact HR for modifications.
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('employee.investment_declaration', fy=fy) }}" class="space-y-6">
+
+      <div class="mb-6 pb-4" style="border-bottom: 1px solid var(--border-color);">
+        <label class="form-label">Tax Regime</label>
+        <select name="tax_regime" class="form-input max-w-xs" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %}>
+          <option value="OLD" {% if existing_declaration and existing_declaration.tax_regime == 'OLD' %}selected{% endif %}>Old Tax Regime</option>
+          <option value="NEW" {% if existing_declaration and existing_declaration.tax_regime == 'NEW' %}selected{% endif %}>New Tax Regime</option>
+        </select>
+      </div>
+
+      <!-- Section 80C -->
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-widest mb-3 pb-2" style="color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+          Section 80C – Max ₹1,50,000
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% set fields_80c = [
+            ('section_80c_pf',        'Employee PF Contribution'),
+            ('section_80c_ppf',       'PPF Deposit'),
+            ('section_80c_lic',       'LIC Premium'),
+            ('section_80c_elss',      'ELSS / Mutual Funds'),
+            ('section_80c_nsc',       'NSC / Post Office'),
+            ('section_80c_home_loan', 'Home Loan Principal'),
+            ('section_80c_tuition',   "Children's Tuition Fees"),
+            ('section_80c_other',     'Other 80C Investments'),
+          ] %}
+          {% for name, label in fields_80c %}
+          <div>
+            <label class="form-label">{{ label }}</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style="color: var(--text-muted);">₹</span>
+              <input type="number" name="{{ name }}" id="{{ name }}" min="0" step="1"
+                     placeholder="0" value="{{ declaration_items.get(name, '') }}"
+                     class="form-input pl-7" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %} />
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Section 80D -->
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-widest mb-3 pb-2" style="color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+          Section 80D – Medical Insurance
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="form-label">Self / Spouse / Children (Max ₹25,000)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style="color: var(--text-muted);">₹</span>
+              <input type="number" name="section_80d_self" id="section_80d_self" min="0" placeholder="0" value="{{ declaration_items.get('section_80d_self', '') }}"
+                     class="form-input pl-7" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %} />
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Parents (Max ₹25,000 / ₹50,000 for senior)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style="color: var(--text-muted);">₹</span>
+              <input type="number" name="section_80d_parents" id="section_80d_parents" min="0" placeholder="0" value="{{ declaration_items.get('section_80d_parents', '') }}"
+                     class="form-input pl-7" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HRA -->
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-widest mb-3 pb-2" style="color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+          HRA – House Rent Allowance
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="form-label">Monthly Rent Paid</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style="color: var(--text-muted);">₹</span>
+              <input type="number" name="hra_rent_paid" id="hra_rent_paid" min="0" placeholder="0" value="{{ declaration_items.get('hra_rent_paid', '') }}"
+                     class="form-input pl-7" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %} />
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Landlord PAN (if rent > ₹1L/yr)</label>
+            <input type="text" name="hra_landlord_pan" id="hra_landlord_pan" maxlength="10" value="{{ declaration_items.get('hra_landlord_pan', '') }}"
+                   placeholder="ABCDE1234F" class="form-input" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %} />
+          </div>
+          <div>
+            <label class="form-label">City Type</label>
+            <select name="hra_city_metro" id="hra_city_metro" class="form-input" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %}>
+              <option value="metro" {% if declaration_items.get('hra_city_metro') == 'metro' %}selected{% endif %}>Metro (Mumbai, Delhi, Kolkata, Chennai)</option>
+              <option value="non_metro" {% if declaration_items.get('hra_city_metro') == 'non_metro' %}selected{% endif %}>Non-Metro</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- LTA & NPS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-widest mb-3 pb-2" style="color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+            LTA – Leave Travel Allowance
+          </h3>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style="color: var(--text-muted);">₹</span>
+            <input type="number" name="lta_amount" id="lta_amount" min="0" placeholder="0" value="{{ declaration_items.get('lta_amount', '') }}"
+                   class="form-input pl-7" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %} />
+          </div>
+        </div>
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-widest mb-3 pb-2" style="color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+            NPS – 80CCD(1B) (Max ₹50,000)
+          </h3>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style="color: var(--text-muted);">₹</span>
+            <input type="number" name="nps_80ccd" id="nps_80ccd" min="0" placeholder="0" value="{{ declaration_items.get('nps_80ccd', '') }}"
+                   class="form-input pl-7" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %} />
+          </div>
+        </div>
+      </div>
+
+      <!-- Home Loan Interest -->
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-widest mb-3 pb-2" style="color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+          Section 24(b) – Home Loan Interest (Max ₹2,00,000)
+        </h3>
+        <div class="relative max-w-xs">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style="color: var(--text-muted);">₹</span>
+          <input type="number" name="home_loan_interest_24b" id="home_loan_interest_24b" min="0" placeholder="0" value="{{ declaration_items.get('home_loan_interest_24b', '') }}"
+                 class="form-input pl-7" {% if not window_open or (existing_declaration and existing_declaration.status == 'SUBMITTED') %}disabled{% endif %} />
+        </div>
+      </div>
+
+      <!-- Submit -->
+      {% if window_open and (not existing_declaration or existing_declaration.status != 'SUBMITTED') %}
+      <div class="flex gap-3 pt-2" style="border-top: 1px solid var(--border-color);">
+        <button type="submit" name="action" value="DRAFT" class="btn-secondary">
+          Save as Draft
+        </button>
+        <button type="submit" name="action" value="SUBMIT" class="btn-primary">
+          Submit Declaration
+        </button>
+      </div>
+      {% endif %}
+
+    </form>
+  </div>
+
+  <!-- Sidebar Info -->
+  <div class="space-y-4">
+
+    <!-- Status -->
+    <div class="card">
+      <h3 class="section-title mb-4">Current Status</h3>
+      <div class="space-y-3">
+        <div class="flex justify-between text-sm">
+          <span style="color: var(--text-muted);">FY</span>
+          <span class="font-medium" style="color: var(--text-primary);">{{ fy }}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span style="color: var(--text-muted);">Submissions</span>
+          <span class="font-medium" style="color: var(--text-primary);">{{ declarations | length }}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span style="color: var(--text-muted);">Window Status</span>
+          <span class="pill-badge {% if window_open %}pill-green{% else %}pill-red{% endif %}">{% if window_open %}Open{% else %}Closed{% endif %}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span style="color: var(--text-muted);">Current Regime</span>
+          <span class="font-medium" style="color: var(--text-primary);">{% if existing_declaration %}{{ existing_declaration.tax_regime }}{% else %}-{% endif %}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Previous Declarations -->
+    {% if declarations %}
+    <div class="card">
+      <h3 class="section-title mb-3">Declaration History</h3>
+      {% for d in declarations %}
+      <div class="py-2 last:border-0" style="border-bottom: 1px solid var(--border-color);">
+        <div class="flex justify-between">
+          <span class="text-xs font-medium" style="color: var(--text-secondary);">{{ d.financial_year }}</span>
+          <span class="pill-badge {% if d.status == 'SUBMITTED' %}pill-green{% elif d.status == 'DRAFT' %}pill-blue{% else %}pill-red{% endif %}">
+            {{ d.status }}
+          </span>
+        </div>
+        <p class="text-xs mt-0.5" style="color: var(--text-muted);">Updated: {{ d.updated_at[:10] if d.updated_at else '-' }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+{% endblock %}

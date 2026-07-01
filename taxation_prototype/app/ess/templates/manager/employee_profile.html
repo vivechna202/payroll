@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Profile View – MSS Portal{% endblock %}
+{% block page_title %}{{ employee.name }}'s Record{% endblock %}
+{% block page_subtitle %}Detailed record overview for team member{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('ess.team_members') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Directory</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <!-- Profile summary card -->
+        <div class="card shadow-sm border-0 text-center py-4 mb-4 bg-light">
+            <div class="card-body">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2.5rem; font-weight: bold;">
+                    {{ employee.name[0] }}
+                </div>
+                <h5 class="fw-bold mb-1">{{ employee.name }}</h5>
+                <p class="text-muted small mb-3">{{ employee.designation }} | {{ employee.department }}</p>
+                <span class="badge bg-success px-3 py-2">Active direct report</span>
+            </div>
+        </div>
+        
+        <!-- Metadata -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase small font-bold border-bottom pb-2 mb-3">Employment Information</h6>
+                <div class="mb-2 d-flex justify-content-between">
+                    <span class="text-muted small">Employee ID</span>
+                    <span class="fw-bold font-monospace">{{ employee.employee_id }}</span>
+                </div>
+                <div class="mb-2 d-flex justify-content-between">
+                    <span class="text-muted small">Email Address</span>
+                    <span>{{ employee.email }}</span>
+                </div>
+                <div class="mb-0 d-flex justify-content-between">
+                    <span class="text-muted small">Date of Joining</span>
+                    <span>{{ employee.date_of_joining }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <!-- Statutory Details -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white pt-4 pb-0 border-bottom-0">
+                <h5 class="fw-bold mb-0">Identity & Statutory Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">PAN</label>
+                        <input type="text" class="form-control font-monospace" value="{{ employee.pan }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">UAN</label>
+                        <input type="text" class="form-control font-monospace" value="{{ employee.uan }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Work State / Location</label>
+                        <input type="text" class="form-control" value="{{ employee.state }}" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Active Contract details -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white pt-4 pb-0 border-bottom-0">
+                <h5 class="fw-bold mb-0">Active Employment Contract</h5>
+            </div>
+            <div class="card-body">
+                {% if active_contract %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Contract Ref</label>
+                        <input type="text" class="form-control font-monospace" value="{{ active_contract.contract_id }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Gross Monthly Salary</label>
+                        <input type="text" class="form-control font-bold text-primary" value="₹{{ "{:,.2f}".format(active_contract.gross_salary|float) }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Start Date</label>
+                        <input type="text" class="form-control" value="{{ active_contract.start_date }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">End Date</label>
+                        <input type="text" class="form-control" value="{{ active_contract.end_date or 'Permanent' }}" readonly>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No active employment contracts mapped for this team member.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

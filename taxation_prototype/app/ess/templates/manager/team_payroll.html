@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Team Payroll Overview – MSS Portal{% endblock %}
+{% block page_title %}Team Payroll Overview{% endblock %}
+{% block page_subtitle %}Audit history of payroll for direct reports{% endblock %}
+
+{% block content %}
+<!-- Back to Dashboard Button -->
+<div class="mb-6">
+    <a href="{{ url_for('ess.team_dashboard') }}" 
+       class="btn-secondary inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:border-slate-400 dark:hover:border-slate-500"
+       style="border: 1px solid var(--border-color); color: var(--text-secondary); background-color: transparent;">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Dashboard
+    </a>
+</div>
+
+<!-- Payroll Ledger Table Card -->
+<div class="rounded-xl border overflow-hidden" style="background-color: var(--bg-card); border-color: var(--border-color);">
+    <!-- Table Header -->
+    <div class="px-6 py-4 border-b" style="border-color: var(--border-color);">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: rgba(99, 102, 241, 0.1);">
+                <svg class="w-5 h-5" style="color: #6366f1;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-base font-semibold" style="color: var(--text-primary);">Payroll Ledger</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Audit history of payroll transactions</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b" style="border-color: var(--border-color);">
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Employee</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Period</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Gross Salary</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Deductions</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Net Payout</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold tracking-wider uppercase" style="color: var(--text-muted);">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payroll_history %}
+                {% set gross = p.gross_salary|float %}
+                {% set net = p.net_salary|float %}
+                {% set deductions = gross - net %}
+                <tr class="border-b transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800/50" style="border-color: var(--border-color);">
+                    <!-- Employee -->
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium" style="color: var(--text-primary);">{{ p.name }}</span>
+                            <span class="text-xs font-mono" style="color: var(--text-muted);">{{ p.employee_id }}</span>
+                        </div>
+                    </td>
+                    
+                    <!-- Period -->
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium" style="color: var(--text-primary);">{{ p.month }}/{{ p.financial_year }}</span>
+                            <span class="text-xs font-mono" style="color: var(--text-muted);">{{ p.payroll_id }}</span>
+                        </div>
+                    </td>
+                    
+                    <!-- Gross Salary -->
+                    <td class="px-6 py-4 text-right">
+                        <span class="text-sm font-mono" style="color: var(--text-secondary);">₹{{ "{:,.2f}".format(gross) }}</span>
+                    </td>
+                    
+                    <!-- Deductions -->
+                    <td class="px-6 py-4 text-right">
+                        <span class="text-sm font-mono" style="color: #dc2626;">-₹{{ "{:,.2f}".format(deductions) }}</span>
+                    </td>
+                    
+                    <!-- Net Payout -->
+                    <td class="px-6 py-4 text-right">
+                        <span class="text-sm font-mono font-semibold" style="color: #059669;">₹{{ "{:,.2f}".format(net) }}</span>
+                    </td>
+                    
+                    <!-- Status -->
+                    <td class="px-6 py-4 text-center">
+                        {% if p.payroll_status == 'LOCKED' %}
+                        <span class="pill-badge" style="background-color: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3);">{{ p.payroll_status }}</span>
+                        {% else %}
+                        <span class="pill-badge pill-green">{{ p.payroll_status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background-color: var(--hover-bg);">
+                                <svg class="w-8 h-8" style="color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-medium" style="color: var(--text-muted);">No processed payroll records found for team.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}My Contracts – ESS Portal{% endblock %}
+{% block page_title %}My Contracts{% endblock %}
+{% block page_subtitle %}Employment agreement and history timeline{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* ── My Contracts – Theme-aware styles ──────────────────────── */
+
+    /* Container Cards */
+    .mc-card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .mc-card-header {
+        padding: 1.25rem 1.5rem 0.5rem;
+    }
+    
+    .mc-card-title {
+        font-size: 1.125rem;
+        font-weight: 800;
+        margin: 0;
+        color: #0f172a;
+    }
+    [data-theme="dark"] .mc-card-title { color: #f1f5f9; }
+
+    .mc-card-body { padding: 1.5rem; }
+
+    /* Back Button */
+    .mc-btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 0.625rem;
+        border: 1px solid var(--border-color);
+        background-color: transparent;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+        cursor: pointer;
+        margin-bottom: 1.5rem;
+    }
+    .mc-btn-back:hover {
+        border-color: var(--text-muted);
+        color: var(--text-primary);
+        background-color: var(--hover-bg);
+    }
+
+    /* Active Contract Details */
+    .mc-active-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+        margin-top: 1.5rem;
+    }
+    @media (max-width: 576px) { .mc-active-grid { grid-template-columns: 1fr; } }
+
+    .mc-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+    
+    .mc-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #475569;
+    }
+    [data-theme="dark"] .mc-label { color: #94a3b8; }
+
+    .mc-value {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    [data-theme="dark"] .mc-value { color: #f1f5f9; }
+
+    .mc-value-mono {
+        font-family: ui-monospace, 'Cascadia Code', monospace;
+        color: var(--alert-info-text);
+        font-size: 0.9375rem;
+    }
+
+    /* Status Pill */
+    .mc-pill-active {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.35rem 1rem;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        background-color: #dcfce7; /* green-100 */
+        color: #166534; /* green-800 */
+        border: 1px solid #bbf7d0; /* green-200 */
+    }
+    [data-theme="dark"] .mc-pill-active {
+        background-color: rgba(16, 185, 129, 0.15); /* emerald-500 low opacity */
+        color: #34d399; /* emerald-400 */
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+    .mc-pill-active::before {
+        content: '';
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: currentColor;
+        flex-shrink: 0;
+    }
+
+    /* Timeline Component */
+    .mc-timeline {
+        position: relative;
+        padding-left: 2rem;
+        margin-top: 1rem;
+    }
+    .mc-timeline::before {
+        content: '';
+        position: absolute;
+        top: 0.5rem;
+        bottom: 0.5rem;
+        left: 0.6rem;
+        width: 2px;
+        background-color: var(--border-color);
+    }
+
+    .mc-timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+    .mc-timeline-item:last-child {
+        margin-bottom: 0;
+    }
+    .mc-timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -1.825rem;
+        top: 0.35rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background-color: var(--bg-card);
+        border: 3px solid var(--text-muted);
+        z-index: 1;
+        box-shadow: 0 0 0 4px var(--bg-card);
+    }
+    
+    .mc-timeline-item.status-active::before {
+        border-color: #10b981; /* emerald-500 */
+        background-color: #10b981;
+    }
+
+    .mc-timeline-card {
+        background-color: var(--input-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .mc-timeline-card:hover {
+        border-color: var(--text-muted);
+    }
+
+    .mc-timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .mc-timeline-id {
+        font-family: ui-monospace, 'Cascadia Code', monospace;
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--alert-info-text);
+    }
+
+    .mc-timeline-badge {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .mc-badge-active {
+        background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;
+    }
+    [data-theme="dark"] .mc-badge-active {
+        background-color: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);
+    }
+    .mc-badge-inactive {
+        background-color: var(--bg-surface); color: var(--text-muted); border: 1px solid var(--border-color);
+    }
+
+    .mc-timeline-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+    }
+    @media (max-width: 576px) { .mc-timeline-grid { grid-template-columns: 1fr; } }
+
+    .mc-timeline-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.25rem;
+    }
+    [data-theme="dark"] .mc-timeline-label { color: #94a3b8; }
+
+    .mc-timeline-val {
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    [data-theme="dark"] .mc-timeline-val { color: #f1f5f9; }
+
+    .mc-timeline-amount {
+        font-size: 1.125rem;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    [data-theme="dark"] .mc-timeline-amount { color: #f1f5f9; }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('ess.my_dashboard') }}" class="mc-btn-back">
+    <i class="bi bi-arrow-left"></i> Back to Dashboard
+</a>
+
+<div class="row g-4">
+    <!-- Active Contract -->
+    <div class="col-lg-5">
+        <div class="mc-card">
+            <div class="mc-card-header">
+                <h2 class="mc-card-title">Active Contract Details</h2>
+            </div>
+            <div class="mc-card-body">
+                {% if active_contract %}
+                <div>
+                    <span class="mc-pill-active">Currently Active</span>
+                </div>
+                
+                <div class="mc-active-grid">
+                    <div class="mc-field">
+                        <span class="mc-label">Contract Reference</span>
+                        <span class="mc-value mc-value-mono">{{ active_contract.contract_id }}</span>
+                    </div>
+                    <div class="mc-field">
+                        <span class="mc-label">Salary Structure Type</span>
+                        <span class="mc-value">{{ active_contract.salary_structure_type }}</span>
+                    </div>
+                    <div class="mc-field">
+                        <span class="mc-label">Start Date</span>
+                        <span class="mc-value">{{ active_contract.start_date }}</span>
+                    </div>
+                    <div class="mc-field">
+                        <span class="mc-label">End Date</span>
+                        <span class="mc-value">{{ active_contract.end_date or 'Permanent / None' }}</span>
+                    </div>
+                    <div class="mc-field">
+                        <span class="mc-label">Notice Period</span>
+                        <span class="mc-value">{{ active_contract.notice_period_days }} Days</span>
+                    </div>
+                </div>
+                {% else %}
+                <p style="color: var(--text-muted); text-align: center; margin: 2rem 0;">No currently active employment contracts found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Timeline / History -->
+    <div class="col-lg-7">
+        <div class="mc-card">
+            <div class="mc-card-header">
+                <h2 class="mc-card-title">Contract History Timeline</h2>
+            </div>
+            <div class="mc-card-body">
+                {% if contracts %}
+                <div class="mc-timeline">
+                    {% for c in contracts %}
+                    <div class="mc-timeline-item {% if c.status == 'active' %}status-active{% endif %}">
+                        <div class="mc-timeline-card">
+                            <div class="mc-timeline-header">
+                                <span class="mc-timeline-id">{{ c.contract_id }}</span>
+                                {% if c.status == 'active' %}
+                                    <span class="mc-timeline-badge mc-badge-active">Running</span>
+                                {% else %}
+                                    <span class="mc-timeline-badge mc-badge-inactive">{{ c.status }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mc-timeline-grid">
+                                <div>
+                                    <div class="mc-timeline-label">Structure</div>
+                                    <div class="mc-timeline-val">{{ c.salary_structure_type }}</div>
+                                </div>
+                                <div>
+                                    <div class="mc-timeline-label">Gross Monthly</div>
+                                    <div class="mc-timeline-amount">₹{{ "{:,.2f}".format(c.gross_salary|float) }}</div>
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <div class="mc-timeline-label">Duration</div>
+                                    <div class="mc-timeline-val">{{ c.start_date }} to {{ c.end_date or 'Present' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color: var(--text-muted); text-align: center; margin: 3rem 0;">No contract history found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
