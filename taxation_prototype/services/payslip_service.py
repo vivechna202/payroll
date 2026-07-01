@@ -251,6 +251,13 @@ def get_employee_payslips(employee_id: str) -> list[dict]:
         return []
     # Filter confirmed and paid
     df = df[df["status"].isin(["Confirmed", "Paid"])]
+    
+    # Join with payroll to get net_salary
+    pay_df = read_csv(CSV_PAYROLL)
+    if not pay_df.empty and "payroll_id" in df.columns:
+        merged = pd.merge(df, pay_df[["payroll_id", "net_salary"]], on="payroll_id", how="left")
+        return merged.to_dict(orient="records")
+    
     return df.to_dict(orient="records")
 
 def update_payslip_status(payslip_id: str, status: str, user: str) -> dict:
@@ -317,7 +324,7 @@ def get_dashboard_stats(fy: str) -> dict:
 def generate_payslip_pdf(payslip_details: dict) -> bytes:
     """Generates PDF natively using ReportLab"""
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     elements = []
     styles = getSampleStyleSheet()
     
@@ -335,7 +342,7 @@ def generate_payslip_pdf(payslip_details: dict) -> bytes:
     elements.append(Spacer(1, 0.2*inch))
     
     elements.append(Paragraph(f"<b>Payslip for {ps.get('month', '')}/{ps.get('financial_year', '')}</b>", styles['Heading3']))
-    elements.append(Spacer(1, 0.2*inch))
+    elements.append(Spacer(1, 0.3*inch))
     
     # Employee Details
     data_emp = [
@@ -344,15 +351,16 @@ def generate_payslip_pdf(payslip_details: dict) -> bytes:
         ["PAN:", emp.get("pan", ""), "UAN:", emp.get("uan", "")],
         ["Payslip ID:", ps.get("payslip_id", ""), "Status:", ps.get("status", "")]
     ]
-    t_emp = Table(data_emp, colWidths=[1.2*inch, 2*inch, 1.2*inch, 2*inch])
+    t_emp = Table(data_emp, colWidths=[1.3*inch, 2.3*inch, 1.3*inch, 2.3*inch])
     t_emp.setStyle(TableStyle([
         ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
         ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
         ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+        ('TOPPADDING', (0,0), (-1,-1), 10),
     ]))
     elements.append(t_emp)
-    elements.append(Spacer(1, 0.3*inch))
+    elements.append(Spacer(1, 0.5*inch))
     
     # Salary Data
     data_sal = [
@@ -374,25 +382,35 @@ def generate_payslip_pdf(payslip_details: dict) -> bytes:
         "TDS", fv(totals.get("tds")), fv(ytd.get("tds"))
     ])
     
-    t_sal = Table(data_sal, colWidths=[1.5*inch, 1*inch, 1*inch, 1.5*inch, 1*inch, 1*inch])
+    t_sal = Table(data_sal, colWidths=[1.6*inch, 1.1*inch, 1.1*inch, 1.6*inch, 1.1*inch, 1.1*inch])
     t_sal.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e2e8f0')),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('GRID', (0,0), (-1,-1), 1, colors.HexColor('#e2e8f0')),
-        ('PADDING', (0,0), (-1,-1), 6),
+        ('PADDING', (0,0), (-1,-1), 10),
         ('ALIGN', (1,0), (2,-1), 'RIGHT'),
         ('ALIGN', (4,0), (5,-1), 'RIGHT'),
     ]))
     elements.append(t_sal)
-    elements.append(Spacer(1, 0.3*inch))
-    
-    # Net Pay
-    elements.append(Paragraph(f"<b>Gross Salary:</b> {fv(totals.get('gross'))}", styles['Normal']))
-    elements.append(Paragraph(f"<b>Total Deductions:</b> {fv(totals.get('gross') - totals.get('net'))}", styles['Normal']))
-    elements.append(Spacer(1, 0.1*inch))
-    elements.append(Paragraph(f"<b>Net Salary: {fv(totals.get('net'))}</b>", styles['Heading3']))
-    
     elements.append(Spacer(1, 0.6*inch))
+    
+    # Summary Section (right-aligned, two-column)
+    data_summary = [
+        ["", "Gross Salary", fv(totals.get('gross'))],
+        ["", "Total Deductions", fv(totals.get('gross') - totals.get('net'))],
+        ["", "Net Salary", fv(totals.get('net'))]
+    ]
+    t_summary = Table(data_summary, colWidths=[3.5*inch, 2.2*inch, 2.2*inch])
+    t_summary.setStyle(TableStyle([
+        ('FONTNAME', (1,0), (1,-1), 'Helvetica-Bold'),
+        ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
+        ('ALIGN', (2,0), (2,-1), 'RIGHT'),
+        ('TOPPADDING', (0,0), (-1,-1), 10),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+        ('LINEBELOW', (1,0), (-1,-1), 1, colors.HexColor('#cbd5e1')),
+    ]))
+    elements.append(t_summary)
+    elements.append(Spacer(1, 2.8*inch))
     
     # Signatures
     data_sig = [
@@ -403,6 +421,8 @@ def generate_payslip_pdf(payslip_details: dict) -> bytes:
     t_sig.setStyle(TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        ('TOPPADDING', (0,0), (-1,-1), 10),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 10),
     ]))
     elements.append(t_sig)
     
