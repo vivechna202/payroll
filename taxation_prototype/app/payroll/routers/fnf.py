@@ -1,4 +1,6 @@
-from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request
+from fastapi import Request
+
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash
 from functools import wraps
 from app.base.utils.config import CURRENT_FY
 from app.payroll.services.fnf_service import (
@@ -35,24 +37,25 @@ def list_settlements():
 
 @fnf_bp.route("/create", methods=["GET", "POST"])
 @hr_required
-def create():
+async def create(request: Request):
     user = session["user"]
     employees = get_all_employees()
     
     if request.method == "POST":
-        employee_id = request.form.get("employee_id")
-        lwd = request.form.get("last_working_date")
+        form = await request.form()
+        employee_id = form.get("employee_id")
+        lwd = form.get("last_working_date")
         
         # If the form submits specific overrides (from a preview step), we use them
-        if request.form.get("action") == "save":
+        if form.get("action") == "save":
             overrides = {
-                "pending_salary": request.form.get("pending_salary", 0),
-                "notice_period_amount": request.form.get("notice_period_amount", 0),
-                "leave_encashment": request.form.get("leave_encashment", 0),
-                "gratuity": request.form.get("gratuity", 0),
-                "bonus_incentives": request.form.get("bonus_incentives", 0),
-                "other_recoveries": request.form.get("other_recoveries", 0),
-                "remarks": request.form.get("remarks", "")
+                "pending_salary": form.get("pending_salary", 0),
+                "notice_period_amount": form.get("notice_period_amount", 0),
+                "leave_encashment": form.get("leave_encashment", 0),
+                "gratuity": form.get("gratuity", 0),
+                "bonus_incentives": form.get("bonus_incentives", 0),
+                "other_recoveries": form.get("other_recoveries", 0),
+                "remarks": form.get("remarks", "")
             }
             res = create_settlement(employee_id, lwd, user["name"], overrides)
             if res["status"] == "success":
@@ -61,7 +64,7 @@ def create():
             else:
                 flash(res["message"], "danger")
                 
-        elif request.form.get("action") == "calculate":
+        elif form.get("action") == "calculate":
             calc = calculate_fnf_components(employee_id, lwd)
             selected_emp = next((e for e in employees if e["employee_id"] == employee_id), None)
             return render_template("hr/fnf/create.html", user=user, employees=employees, 
@@ -82,9 +85,10 @@ def view(settlement_id):
 
 @fnf_bp.route("/status/<settlement_id>", methods=["POST"])
 @hr_required
-def change_status(settlement_id):
+async def change_status(settlement_id, request: Request):
     user = session["user"]
-    action = request.form.get("action")
+    form = await request.form()
+    action = form.get("action")
     
     status_map = {
         "review": "Under Review",

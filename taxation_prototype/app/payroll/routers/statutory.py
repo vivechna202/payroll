@@ -1,4 +1,6 @@
-from app.base.utils.flask_compat import Blueprint, render_template, request, redirect, url_for, flash
+from fastapi import Request
+
+from app.base.utils.flask_compat import Blueprint, render_template, redirect, url_for, flash
 from app.payroll.services import statutory_service
 
 statutory_bp = Blueprint("statutory", __name__, url_prefix="/statutory")
@@ -20,35 +22,36 @@ def list_configs():
     return render_template("hr/statutory/configs_list.html", configs=configs)
 
 @statutory_bp.route("/configs/new", methods=["GET", "POST"])
-def create_config():
+async def create_config(request: Request):
     if request.method == "POST":
-        rule_type = request.form.get("rule_type")
-        state = request.form.get("state")
-        enabled = request.form.get("enabled", "No")
-        effective_from = request.form.get("effective_from")
+        form = await request.form()
+        rule_type = form.get("rule_type")
+        state = form.get("state")
+        enabled = form.get("enabled", "No")
+        effective_from = form.get("effective_from")
         
         # Build parameters dict based on rule_type
         parameters = {}
         if rule_type == "PF":
             parameters = {
-                "employee_rate": float(request.form.get("pf_employee_rate", 12.0)),
-                "employer_rate": float(request.form.get("pf_employer_rate", 12.0)),
-                "eps_rate": float(request.form.get("pf_eps_rate", 8.33)),
-                "wage_ceiling": float(request.form.get("pf_wage_ceiling", 15000.0)),
-                "respect_wage_ceiling": request.form.get("pf_respect_wage_ceiling") == "on",
-                "enable_eps_split": request.form.get("pf_enable_eps_split") == "on"
+                "employee_rate": float(form.get("pf_employee_rate", 12.0)),
+                "employer_rate": float(form.get("pf_employer_rate", 12.0)),
+                "eps_rate": float(form.get("pf_eps_rate", 8.33)),
+                "wage_ceiling": float(form.get("pf_wage_ceiling", 15000.0)),
+                "respect_wage_ceiling": form.get("pf_respect_wage_ceiling") == "on",
+                "enable_eps_split": form.get("pf_enable_eps_split") == "on"
             }
         elif rule_type == "ESI":
             parameters = {
-                "employee_rate": float(request.form.get("esi_employee_rate", 0.75)),
-                "employer_rate": float(request.form.get("esi_employer_rate", 3.25)),
-                "wage_ceiling": float(request.form.get("esi_wage_ceiling", 21000.0))
+                "employee_rate": float(form.get("esi_employee_rate", 0.75)),
+                "employer_rate": float(form.get("esi_employer_rate", 3.25)),
+                "wage_ceiling": float(form.get("esi_wage_ceiling", 21000.0))
             }
         # For PT and LWF, the params can be more complex (e.g. JSON slabs).
         # We'll expect them to be provided as JSON strings from the frontend for simplicity if needed,
         # or we build a simplified version. For enterprise, a raw JSON editor might suffice for slabs.
         elif rule_type in ["PT", "LWF"]:
-            raw_params = request.form.get("raw_parameters", "{}")
+            raw_params = form.get("raw_parameters", "{}")
             import json
             try:
                 parameters = json.loads(raw_params)
@@ -66,15 +69,16 @@ def create_config():
     return render_template("hr/statutory/config_form.html", config=None)
 
 @statutory_bp.route("/configs/<config_id>/edit", methods=["GET", "POST"])
-def edit_config(config_id):
+async def edit_config(config_id, request: Request):
     config = statutory_service.get_config_by_id(config_id)
     if not config:
         flash("Configuration not found.", "danger")
         return redirect(url_for("statutory.list_configs"))
 
     if request.method == "POST":
-        enabled = request.form.get("enabled", "No")
-        effective_from = request.form.get("effective_from")
+        form = await request.form()
+        enabled = form.get("enabled", "No")
+        effective_from = form.get("effective_from")
         
         updates = {
             "enabled": enabled,
@@ -86,23 +90,23 @@ def edit_config(config_id):
         parameters = {}
         if rule_type == "PF":
             parameters = {
-                "employee_rate": float(request.form.get("pf_employee_rate", 12.0)),
-                "employer_rate": float(request.form.get("pf_employer_rate", 12.0)),
-                "eps_rate": float(request.form.get("pf_eps_rate", 8.33)),
-                "wage_ceiling": float(request.form.get("pf_wage_ceiling", 15000.0)),
-                "respect_wage_ceiling": request.form.get("pf_respect_wage_ceiling") == "on",
-                "enable_eps_split": request.form.get("pf_enable_eps_split") == "on"
+                "employee_rate": float(form.get("pf_employee_rate", 12.0)),
+                "employer_rate": float(form.get("pf_employer_rate", 12.0)),
+                "eps_rate": float(form.get("pf_eps_rate", 8.33)),
+                "wage_ceiling": float(form.get("pf_wage_ceiling", 15000.0)),
+                "respect_wage_ceiling": form.get("pf_respect_wage_ceiling") == "on",
+                "enable_eps_split": form.get("pf_enable_eps_split") == "on"
             }
             updates["parameters_json"] = parameters
         elif rule_type == "ESI":
             parameters = {
-                "employee_rate": float(request.form.get("esi_employee_rate", 0.75)),
-                "employer_rate": float(request.form.get("esi_employer_rate", 3.25)),
-                "wage_ceiling": float(request.form.get("esi_wage_ceiling", 21000.0))
+                "employee_rate": float(form.get("esi_employee_rate", 0.75)),
+                "employer_rate": float(form.get("esi_employer_rate", 3.25)),
+                "wage_ceiling": float(form.get("esi_wage_ceiling", 21000.0))
             }
             updates["parameters_json"] = parameters
         elif rule_type in ["PT", "LWF"]:
-            raw_params = request.form.get("raw_parameters", "{}")
+            raw_params = form.get("raw_parameters", "{}")
             import json
             try:
                 updates["parameters_json"] = json.loads(raw_params)

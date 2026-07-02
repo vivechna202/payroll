@@ -1,5 +1,7 @@
 import io
-from app.base.utils.flask_compat import Blueprint, render_template, request, redirect, url_for, flash, send_file, session
+from fastapi import Request
+
+from app.base.utils.flask_compat import Blueprint, render_template, redirect, url_for, flash, send_file, session, request
 from app.payroll.services import payslip_service
 from app.payroll.services import payroll_service
 from app.base.utils.config import CURRENT_FY
@@ -79,8 +81,9 @@ def download_payslip(payslip_id):
 
 @payslips_bp.route("/status/<payslip_id>", methods=["POST"])
 @hr_required
-def update_status(payslip_id):
-    status = request.form.get("status")
+async def update_status(payslip_id, request: Request):
+    form = await request.form()
+    status = form.get("status")
     user = session["user"]["employee_id"]
     res = payslip_service.update_payslip_status(payslip_id, status, user)
     if res["status"] == "success":

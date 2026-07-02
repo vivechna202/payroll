@@ -3,7 +3,9 @@ contract_routes.py – Flask routes for the HR Employee Contracts module.
 Supports listing, viewing, creating, editing, and transitioning contracts.
 """
 
-from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request
+from fastapi import Request
+
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash
 from functools import wraps
 import math
 
@@ -31,15 +33,15 @@ def hr_required(f):
 
 @contract_bp.route("/")
 @hr_required
-def list_contracts():
+async def list_contracts(request: Request):
     user = session["user"]
-    search = request.args.get("search", "").strip()
-    status_filter = request.args.get("status", "").strip()
-    type_filter = request.args.get("type", "").strip()
+    search = request.query_params.get("search", "").strip()
+    status_filter = request.query_params.get("status", "").strip()
+    type_filter = request.query_params.get("type", "").strip()
     
     # Pagination
     try:
-        page = int(request.args.get("page", 1))
+        page = int(request.query_params.get("page", 1))
     except ValueError:
         page = 1
     per_page = 10
@@ -73,22 +75,23 @@ def list_contracts():
 
 @contract_bp.route("/new", methods=["GET", "POST"])
 @hr_required
-def new_contract():
+async def new_contract(request: Request):
     user = session["user"]
     
     if request.method == "POST":
+        form = await request.form()
         data = {
-            "employee_id": request.form.get("employee_id", "").strip(),
-            "company": request.form.get("company", "TaxPro Corp").strip(),
-            "contract_start_date": request.form.get("contract_start_date", "").strip(),
-            "contract_end_date": request.form.get("contract_end_date", "").strip(),
-            "salary_structure": request.form.get("salary_structure", "").strip(),
-            "salary_structure_type": request.form.get("salary_structure_type", "Permanent").strip(),
-            "work_schedule": request.form.get("work_schedule", "Standard 40 Hours/Week").strip(),
-            "currency": request.form.get("currency", "INR").strip(),
-            "basic_salary": request.form.get("basic_salary", "0").strip(),
-            "gross_salary": request.form.get("gross_salary", "0").strip(),
-            "status": request.form.get("status", "Draft").strip()
+            "employee_id": form.get("employee_id", "").strip(),
+            "company": form.get("company", "TaxPro Corp").strip(),
+            "contract_start_date": form.get("contract_start_date", "").strip(),
+            "contract_end_date": form.get("contract_end_date", "").strip(),
+            "salary_structure": form.get("salary_structure", "").strip(),
+            "salary_structure_type": form.get("salary_structure_type", "Permanent").strip(),
+            "work_schedule": form.get("work_schedule", "Standard 40 Hours/Week").strip(),
+            "currency": form.get("currency", "INR").strip(),
+            "basic_salary": form.get("basic_salary", "0").strip(),
+            "gross_salary": form.get("gross_salary", "0").strip(),
+            "status": form.get("status", "Draft").strip()
         }
         
         res = create_contract(data)
@@ -133,7 +136,7 @@ def view_contract(contract_id):
 
 @contract_bp.route("/<contract_id>/edit", methods=["GET", "POST"])
 @hr_required
-def edit_contract(contract_id):
+async def edit_contract(contract_id, request: Request):
     user = session["user"]
     contract = get_contract_by_id(contract_id)
     if not contract:
@@ -141,17 +144,18 @@ def edit_contract(contract_id):
         return redirect(url_for("contracts.list_contracts"))
         
     if request.method == "POST":
+        form = await request.form()
         updates = {
-            "company": request.form.get("company", "").strip(),
-            "contract_start_date": request.form.get("contract_start_date", "").strip(),
-            "contract_end_date": request.form.get("contract_end_date", "").strip(),
-            "salary_structure": request.form.get("salary_structure", "").strip(),
-            "salary_structure_type": request.form.get("salary_structure_type", "").strip(),
-            "work_schedule": request.form.get("work_schedule", "").strip(),
-            "currency": request.form.get("currency", "").strip(),
-            "basic_salary": request.form.get("basic_salary", "0").strip(),
-            "gross_salary": request.form.get("gross_salary", "0").strip(),
-            "status": request.form.get("status", "").strip()
+            "company": form.get("company", "").strip(),
+            "contract_start_date": form.get("contract_start_date", "").strip(),
+            "contract_end_date": form.get("contract_end_date", "").strip(),
+            "salary_structure": form.get("salary_structure", "").strip(),
+            "salary_structure_type": form.get("salary_structure_type", "").strip(),
+            "work_schedule": form.get("work_schedule", "").strip(),
+            "currency": form.get("currency", "").strip(),
+            "basic_salary": form.get("basic_salary", "0").strip(),
+            "gross_salary": form.get("gross_salary", "0").strip(),
+            "status": form.get("status", "").strip()
         }
         
         res = update_contract(contract_id, updates)
@@ -180,8 +184,9 @@ def edit_contract(contract_id):
 
 @contract_bp.route("/<contract_id>/status", methods=["POST"])
 @hr_required
-def change_status(contract_id):
-    new_status = request.form.get("status", "").strip()
+async def change_status(contract_id, request: Request):
+    form = await request.form()
+    new_status = form.get("status", "").strip()
     res = set_contract_status(contract_id, new_status)
     if res["status"] == "success":
         flash(res["message"], "success")

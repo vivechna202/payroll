@@ -1,5 +1,7 @@
 """HR taxation routes (TDS, proofs, declarations, Form 16/24Q, challans)."""
-from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, request, send_file, jsonify, make_response
+from fastapi import Request
+
+from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, send_file, jsonify, make_response
 from datetime import date
 import io
 import os
@@ -21,16 +23,17 @@ from app.base.routers.blueprints import hr_bp, hr_required
 
 @hr_bp.route("/monthly-tds", methods=["GET", "POST"])
 @hr_required
-def monthly_tds():
+async def monthly_tds(request: Request):
     user = session["user"]
     today = date.today()
-    month = request.args.get("month", str(today.month))
-    fy = request.args.get("fy", CURRENT_FY)
+    month = request.query_params.get("month", str(today.month))
+    fy = request.query_params.get("fy", CURRENT_FY)
     
     if request.method == "POST":
+        form = await request.form()
         result = compute_tds_for_month(
-            request.form.get("month", month),
-            request.form.get("fy", fy)
+            form.get("month", month),
+            form.get("fy", fy)
         )
         if result["status"] == "success":
             flash(f"TDS Calculation triggered. {result['message']}", "success")
@@ -54,13 +57,14 @@ def monthly_tds():
 
 @hr_bp.route("/proof-approval", methods=["GET", "POST"])
 @hr_required
-def proof_approval():
+async def proof_approval(request: Request):
     user = session["user"]
 
     if request.method == "POST":
-        proof_id = request.form.get("proof_id")
-        action = request.form.get("action")
-        remarks = request.form.get("remarks", "")
+        form = await request.form()
+        proof_id = form.get("proof_id")
+        action = form.get("action")
+        remarks = form.get("remarks", "")
         if action == "approve":
             approve_proof(proof_id, user["name"], remarks)
             flash(f"Proof {proof_id} approved.", "success")
@@ -69,8 +73,8 @@ def proof_approval():
             flash(f"Proof {proof_id} rejected.", "warning")
         return redirect(url_for("hr.proof_approval"))
 
-    filter_status = request.args.get("status", "ALL")
-    filter_employee = request.args.get("employee_id", "").strip().lower()
+    filter_status = request.query_params.get("status", "ALL")
+    filter_employee = request.query_params.get("employee_id", "").strip().lower()
     
     if filter_status == "PENDING":
         proofs = get_all_pending_proofs()
@@ -88,25 +92,26 @@ def proof_approval():
         user=user,
         proofs=proofs,
         filter_status=filter_status,
-        filter_employee=request.args.get("employee_id", ""),
+        filter_employee=request.query_params.get("employee_id", ""),
         active_page="proof_approval",
     )
 
 
 @hr_bp.route("/declaration-window", methods=["GET", "POST"])
 @hr_required
-def declaration_window():
+async def declaration_window(request: Request):
     user = session["user"]
     windows = csv_to_records(CSV_DECLARATION_WINDOWS)
 
     if request.method == "POST":
         import uuid
+        form = await request.form()
         new_window = {
             "window_id": str(uuid.uuid4())[:8].upper(),
-            "fy": request.form.get("fy", CURRENT_FY),
-            "window_type": request.form.get("window_type", ""),
-            "start_date": request.form.get("start_date", ""),
-            "end_date": request.form.get("end_date", ""),
+            "fy": form.get("fy", CURRENT_FY),
+            "window_type": form.get("window_type", ""),
+            "start_date": form.get("start_date", ""),
+            "end_date": form.get("end_date", ""),
             "created_by": user["name"],
             "created_on": date.today().isoformat(),
             "status": "ACTIVE",
@@ -126,13 +131,13 @@ def declaration_window():
 
 @hr_bp.route("/declarations")
 @hr_required
-def declarations():
+async def declarations(request: Request):
     user = session["user"]
     all_declarations = get_all_declarations()
     
-    emp_filter = request.args.get("employee_id", "").strip().lower()
-    fy_filter = request.args.get("fy", "")
-    status_filter = request.args.get("status", "")
+    emp_filter = request.query_params.get("employee_id", "").strip().lower()
+    fy_filter = request.query_params.get("fy", "")
+    status_filter = request.query_params.get("status", "")
     
     filtered_declarations = []
     for d in all_declarations:
@@ -155,10 +160,10 @@ def declarations():
 
 @hr_bp.route("/form24q", methods=["GET", "POST"])
 @hr_required
-def form24q():
+async def form24q(request: Request):
     user = session["user"]
-    selected_quarter = request.args.get("quarter", "Q1")
-    selected_fy = request.args.get("fy", CURRENT_FY)
+    selected_quarter = request.query_params.get("quarter", "Q1")
+    selected_fy = request.query_params.get("fy", CURRENT_FY)
 
     quarterly_summary = get_quarterly_summary(selected_quarter, selected_fy)
     employee_details = get_quarterly_employee_details(selected_quarter, selected_fy)
@@ -166,8 +171,9 @@ def form24q():
     fvu_path = get_fvu_path()
 
     if request.method == "POST":
-        quarter = request.form.get("quarter", selected_quarter)
-        fy = request.form.get("fy", selected_fy)
+        form = await request.form()
+        quarter = form.get("quarter", selected_quarter)
+        fy = form.get("fy", selected_fy)
         print(f"[ROUTE] POST /hr/form24q — quarter={quarter}, fy={fy}, user={user['name']}")
         print("[ROUTE] Calling generate_form24q (TXT only, no FVU)...")
         result = generate_form24q(quarter, fy, user["name"])
@@ -194,8 +200,9 @@ def form24q():
 
 @hr_bp.route("/form24q/config-fvu", methods=["POST"])
 @hr_required
-def config_fvu():
-    fvu_path = request.form.get("fvu_path", "").strip()
+async def config_fvu(request: Request):
+    form = await request.form()
+    fvu_path = form.get("fvu_path", "").strip()
     save_fvu_path(fvu_path)
     flash("Government FVU Utility path configuration updated successfully.", "success")
     return redirect(url_for("hr.form24q"))
@@ -262,9 +269,9 @@ def download_form24q(filename):
 
 @hr_bp.route("/form16", methods=["GET"])
 @hr_required
-def form16():
+async def form16(request: Request):
     user = session["user"]
-    selected_fy = request.args.get("fy", CURRENT_FY)
+    selected_fy = request.query_params.get("fy", CURRENT_FY)
     
     from app.taxation.services.form16_service import get_eligible_employees, get_form16_history
     eligible_employees = get_eligible_employees(selected_fy)
@@ -285,10 +292,11 @@ def form16():
 
 @hr_bp.route("/form16/single", methods=["POST"])
 @hr_required
-def form16_single():
+async def form16_single(request: Request):
     user = session["user"]
-    employee_id = request.form.get("employee_id")
-    fy = request.form.get("fy", CURRENT_FY)
+    form = await request.form()
+    employee_id = form.get("employee_id")
+    fy = form.get("fy", CURRENT_FY)
     
     from app.taxation.services.form16_service import generate_form16
     res = generate_form16(employee_id, fy, user["name"])
@@ -301,9 +309,10 @@ def form16_single():
 
 @hr_bp.route("/form16/bulk", methods=["POST"])
 @hr_required
-def form16_bulk():
+async def form16_bulk(request: Request):
     user = session["user"]
-    fy = request.form.get("fy", CURRENT_FY)
+    form = await request.form()
+    fy = form.get("fy", CURRENT_FY)
     
     from app.taxation.services.form16_service import bulk_generate_form16
     res = bulk_generate_form16(fy, user["name"])

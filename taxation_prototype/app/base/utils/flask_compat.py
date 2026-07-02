@@ -5,8 +5,11 @@ Allows existing route handler logic to remain unchanged while running on FastAPI
 """
 from __future__ import annotations
 
+import inspect
 import os
+import re
 from contextvars import ContextVar
+from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Union
 from urllib.parse import urlencode
 
@@ -89,10 +92,34 @@ class _FilesProxy:
         self._files = files
 
     def get(self, key: str, default: Any = None) -> Any:
-        return self._files.get(key, default)
+        value = self._files.get(key, default)
+        if isinstance(value, list):
+            return value[0] if value else default
+        return value
+
+    def getlist(self, key: str) -> list:
+        value = self._files.get(key, [])
+        if isinstance(value, list):
+            return value
+        if value is None:
+            return []
+        return [value]
+
+    def __getitem__(self, key: str) -> Any:
+        value = self._files[key]
+        if isinstance(value, list):
+            return value[0]
+        return value
 
     def __contains__(self, key: str) -> bool:
         return key in self._files
+
+
+if not hasattr(Request, "referrer"):
+    Request.referrer = property(lambda self: self.headers.get("referer"))
+
+if not hasattr(Request, "files"):
+    Request.files = property(lambda self: _FilesProxy(getattr(self.state, "_files", {})))
 
 
 class _RequestProxy:
@@ -115,6 +142,18 @@ class _RequestProxy:
     @property
     def files(self) -> _FilesProxy:
         return _FilesProxy(getattr(get_request().state, "_files", {}))
+
+    @property
+    def referrer(self) -> Optional[str]:
+        return get_request().headers.get("referer")
+
+    @property
+    def url(self) -> str:
+        return str(get_request().url)
+
+    @property
+    def path(self) -> str:
+        return get_request().url.path
 
 
 request = _RequestProxy()
@@ -280,7 +319,11 @@ async def _parse_request_body(req: Request) -> None:
         if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
             form = await req.form()
             req.state._form = {k: form.get(k) for k in form.keys()}
-            req.state._files = {k: form.get(k) for k in form.keys() if hasattr(form.get(k), "filename")}
+            req.state._files = {
+                k: form.getlist(k)
+                for k in form.keys()
+                if any(hasattr(item, "filename") for item in form.getlist(k))
+            }
         else:
             req.state._form = {}
             req.state._files = {}
@@ -321,7 +364,23 @@ class CompatRouter:
                           return _normalize_response(result)
 
                   try:
-                      result = f()
+                      sig = inspect.signature(f)
+                      params = sig.parameters
+                      path_params = dict(request.path_params)
+                      has_varkw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+                      call_kwargs = {
+                          key: value
+                          for key, value in path_params.items()
+                          if key in params or has_varkw
+                      }
+                      if "request" in params:
+                          call_kwargs["request"] = request
+                      if call_kwargs:
+                          result = f(**call_kwargs)
+                      else:
+                          result = f()
+                      if inspect.isawaitable(result):
+                          result = await result
                   except RedirectException as exc:
                       return RedirectResponse(url=exc.url, status_code=exc.status_code)
 
@@ -335,7 +394,7 @@ class CompatRouter:
               finally:
                   _current_request.reset(token)
 
-          path = rule if rule.startswith("/") else f"/{rule}"
+          path = _flask_rule_to_fastapi(rule if rule.startswith("/") else f"/{rule}")
           for method in methods:
               self.router.add_api_route(
                   path,
@@ -370,6 +429,7 @@ Blueprint = CompatRouter
 # ── Auth decorators (unchanged interface) ─────────────────────────────────
 
 def hr_required(f: Callable):
+    @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
             flash("Please log in to continue.", "warning")
@@ -378,11 +438,11 @@ def hr_required(f: Callable):
             flash("HR access required.", "danger")
             raise RedirectException(url_for("dashboard"))
         return f(*args, **kwargs)
-    decorated.__name__ = f.__name__
     return decorated
 
 
 def employee_required(f: Callable):
+    @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
             flash("Please log in to continue.", "warning")
@@ -391,21 +451,21 @@ def employee_required(f: Callable):
             flash("Access denied.", "danger")
             raise RedirectException(url_for("auth.login"))
         return f(*args, **kwargs)
-    decorated.__name__ = f.__name__
     return decorated
 
 
 def login_required(f: Callable):
+    @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
             flash("Please log in to continue.", "warning")
             raise RedirectException(url_for("auth.login"))
         return f(*args, **kwargs)
-    decorated.__name__ = f.__name__
     return decorated
 
 
 def manager_required(f: Callable):
+    @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
             flash("Please log in to continue.", "warning")
@@ -415,8 +475,19 @@ def manager_required(f: Callable):
             flash("Access denied. Manager role required.", "danger")
             raise RedirectException(url_for("dashboard"))
         return f(*args, **kwargs)
-    decorated.__name__ = f.__name__
     return decorated
+
+
+def _flask_rule_to_fastapi(rule: str) -> str:
+    """Convert Flask path params (``<id>``, ``<path:name>``) to FastAPI syntax."""
+    def repl(match):
+        converter = match.group("converter")
+        name = match.group("name")
+        if converter == "path":
+            return f"{{{name}:path}}"
+        return f"{{{name}}}"
+
+    return re.sub(r"<(?:(?P<converter>[^:<>]+):)?(?P<name>[^<>]+)>", repl, rule)
 
 
 # ── File response helpers ─────────────────────────────────────────────────

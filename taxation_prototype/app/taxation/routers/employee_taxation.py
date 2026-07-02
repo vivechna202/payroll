@@ -1,5 +1,7 @@
 """Employee taxation routes."""
-from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, request, send_from_directory, send_file, abort
+from fastapi import Request
+
+from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, send_from_directory, send_file, abort
 import os
 import csv
 from app.base.utils.config import CSV_EMPLOYEES, CSV_DECLARATIONS, CSV_FORM16_HISTORY, CURRENT_FY, CSV_FORM16_APPROVED, FORM16_FOLDER, FORM16_SIGNED_FOLDER
@@ -32,9 +34,9 @@ def tax_dashboard():
 
 @employee_bp.route("/investment-declaration", methods=["GET", "POST"])
 @employee_required
-def investment_declaration():
+async def investment_declaration(request: Request):
     user = session["user"]
-    fy = request.args.get("fy", CURRENT_FY)
+    fy = request.query_params.get("fy", CURRENT_FY)
     
     declarations = get_employee_declarations(user["employee_id"])
     fy_declarations = [d for d in declarations if d.get("financial_year") == fy]
@@ -55,12 +57,13 @@ def investment_declaration():
             flash("Cannot edit a submitted declaration.", "danger")
             return redirect(url_for("employee.investment_declaration", fy=fy))
             
-        action = request.form.get("action", "DRAFT")
+        form = await request.form()
+        action = form.get("action", "DRAFT")
         status = "SUBMITTED" if action == "SUBMIT" else "DRAFT"
-        regime = request.form.get("tax_regime", "OLD")
+        regime = form.get("tax_regime", "OLD")
         
         items = {}
-        for key, value in request.form.items():
+        for key, value in form.items():
             if key not in ["action", "tax_regime"] and value.strip():
                 items[key] = value.strip()
                 
@@ -87,7 +90,7 @@ def investment_declaration():
 
 @employee_bp.route("/proof-upload", methods=["GET", "POST"])
 @employee_required
-def proof_upload():
+async def proof_upload(request: Request):
     user = session["user"]
     proofs = get_proofs_for_employee(user["employee_id"])
     
@@ -95,8 +98,9 @@ def proof_upload():
     submitted_declarations = [d for d in declarations if d.get("status") == "SUBMITTED"]
 
     if request.method == "POST":
-        section = request.form.get("section")
-        declaration_id = request.form.get("declaration_id")
+        form = await request.form()
+        section = form.get("section")
+        declaration_id = form.get("declaration_id")
         
         decl = next((d for d in submitted_declarations if d.get("declaration_id") == declaration_id), None)
         if not decl:
@@ -131,9 +135,9 @@ def proof_upload():
 
 @employee_bp.route("/form16-download")
 @employee_required
-def form16_download():
+async def form16_download(request: Request):
     user = session["user"]
-    fy = request.args.get("fy", CURRENT_FY)
+    fy = request.query_params.get("fy", CURRENT_FY)
     
     from app.taxation.services.form16_service import get_form16_history, get_form16_details
     form16_records = get_form16_history(fy=fy, employee_id=user["employee_id"])

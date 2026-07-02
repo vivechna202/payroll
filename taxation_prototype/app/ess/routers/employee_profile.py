@@ -1,5 +1,7 @@
 """Employee profile route (shared ESS)."""
-from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, request
+from fastapi import Request
+
+from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash
 from app.base.utils.config import CSV_EMPLOYEES, CURRENT_FY
 from app.base.utils.csv_service import read_csv_row
 from app.payroll.services.contract_service import get_active_contract, get_contracts_for_employee
@@ -7,12 +9,12 @@ from app.base.routers.blueprints import employee_bp, employee_required
 
 @employee_bp.route("/profile")
 @employee_required
-def profile():
+async def profile(request: Request):
     user = session["user"]
     role = user.get("role")
     
     # Determine which employee profile to show
-    target_employee_id = request.args.get("employee_id", "").strip()
+    target_employee_id = request.query_params.get("employee_id", "").strip()
     
     if role == "employee":
         # Employees can only view their own profile

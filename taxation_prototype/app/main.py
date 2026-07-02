@@ -12,6 +12,7 @@ import os
 import sys
 from contextlib import asynccontextmanager
 
+
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
@@ -158,4 +159,4 @@ _register_routers()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=5050, reload=DEBUG)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=DEBUG)

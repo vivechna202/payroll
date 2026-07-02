@@ -14,7 +14,6 @@ from app.base.utils.flask_compat import (
     send_from_directory,
     session,
     url_for,
-    request,
 )
 
 pages_bp = Blueprint("pages", __name__, url_prefix="")
@@ -33,10 +32,11 @@ def login_redirect():
 
 
 @pages_bp.route("/auth/login", methods=["GET", "POST"], endpoint="auth.login")
-def auth_login():
+async def auth_login(request: Request):
     if request.method == "POST":
-        username = request.form.get("username", "").strip().lower()
-        password = request.form.get("password", "")
+        form = await request.form()
+        username = form.get("username", "").strip().lower()
+        password = form.get("password", "")
         user = DUMMY_USERS.get(username)
         if user and user["password"] == password:
             session["user"] = {
@@ -52,10 +52,11 @@ def auth_login():
 
 
 @pages_bp.route("/auth/switch-role", methods=["POST"], endpoint="auth.switch_role")
-def switch_role():
+async def switch_role(request: Request):
     if "user" not in session:
         return redirect(url_for("auth.login"))
-    target_role = request.form.get("role")
+    form = await request.form()
+    target_role = form.get("role")
     for uname, udata in DUMMY_USERS.items():
         if udata["role"] == target_role:
             session["user"] = {

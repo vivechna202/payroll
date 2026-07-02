@@ -23,6 +23,8 @@ import uuid
 import csv
 from datetime import datetime
 
+from fastapi import Request
+
 from app.base.utils.flask_compat import (
     Blueprint, render_template, session, redirect, url_for,
     flash, request, jsonify, send_file, abort,
@@ -153,9 +155,10 @@ def dashboard():
 
 @form16_processing_bp.route("/set-tan", methods=["POST"])
 @hr_required
-def set_tan():
+async def set_tan(request: Request):
     """Validate TAN and store in session (never persisted elsewhere)."""
-    tan_input = request.form.get("tan", "").strip().upper()
+    form = await request.form()
+    tan_input = form.get("tan", "").strip().upper()
     result = validate_tan(tan_input)
 
     if not result["valid"]:
@@ -616,13 +619,14 @@ def check_certificate():
 
 @form16_processing_bp.route("/upload-certificate", methods=["POST"])
 @hr_required
-def upload_certificate():
+async def upload_certificate(request: Request):
     from app.taxation.services.sign_service import save_certificate
+    form = await request.form()
     if "certificate" not in request.files:
         return jsonify({"status": "error", "message": "No file uploaded"}), 400
         
     file_obj = request.files["certificate"]
-    password = request.form.get("password")
+    password = form.get("password")
     
     if not password:
         return jsonify({"status": "error", "message": "Password is required"}), 400
@@ -819,4 +823,3 @@ def _log_publish_to_csv(record):
             ])
     except Exception as e:
         print(f"Error logging publish to CSV: {e}")
-

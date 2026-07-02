@@ -3,7 +3,9 @@ workflow_routes.py – Blueprints for workflows and notifications.
 """
 
 import json
-from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request, abort, jsonify
+from fastapi import Request
+
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, abort, jsonify
 from functools import wraps
 from app.base.utils.config import CURRENT_FY
 from app.workflow.services.workflow_service import (
@@ -141,10 +143,11 @@ def view_request(request_id):
 
 @workflow_bp.route("/action/<request_id>", methods=["POST"])
 @login_required
-def action_request(request_id):
+async def action_request(request_id, request: Request):
     user = session["user"]
-    action = request.form.get("action")  # Approve, Reject, Send Back
-    comment = request.form.get("comment", "")
+    form = await request.form()
+    action = form.get("action")  # Approve, Reject, Send Back
+    comment = form.get("comment", "")
     
     # Use role name 'hr' if user is HR for role checking
     approver_id = "hr" if user["role"] == "hr" else user["employee_id"]

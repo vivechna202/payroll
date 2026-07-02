@@ -5,7 +5,9 @@ Blueprint prefix: /hr/salary
 All routes are HR-only.
 """
 
-from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify
+from fastapi import Request
+
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, jsonify
 from functools import wraps
 
 from app.base.utils.config import CURRENT_FY
@@ -47,11 +49,11 @@ def hr_required(f):
 
 @salary_bp.route("/components")
 @hr_required
-def list_components():
+async def list_components(request: Request):
     user = session["user"]
-    search = request.args.get("search", "").strip()
-    category_filter = request.args.get("category", "").strip()
-    active_filter = request.args.get("active", "").strip()
+    search = request.query_params.get("search", "").strip()
+    category_filter = request.query_params.get("category", "").strip()
+    active_filter = request.query_params.get("active", "").strip()
 
     active_only = active_filter == "Yes"
     components = get_all_components(
@@ -76,23 +78,24 @@ def list_components():
 
 @salary_bp.route("/components/new", methods=["GET", "POST"])
 @hr_required
-def new_component():
+async def new_component(request: Request):
     user = session["user"]
     all_codes = get_all_codes()
 
     if request.method == "POST":
+        form = await request.form()
         data = {
-            "name": request.form.get("name", "").strip(),
-            "code": request.form.get("code", "").strip(),
-            "category": request.form.get("category", "Earning").strip(),
-            "computation_type": request.form.get("computation_type", "Fixed").strip(),
-            "amount": request.form.get("amount", "0").strip(),
-            "percentage": request.form.get("percentage", "0").strip(),
-            "percentage_of": request.form.get("percentage_of", "").strip(),
-            "formula": request.form.get("formula", "").strip(),
-            "sequence": request.form.get("sequence", "100").strip(),
-            "taxable": request.form.get("taxable", "No").strip(),
-            "description": request.form.get("description", "").strip(),
+            "name": form.get("name", "").strip(),
+            "code": form.get("code", "").strip(),
+            "category": form.get("category", "Earning").strip(),
+            "computation_type": form.get("computation_type", "Fixed").strip(),
+            "amount": form.get("amount", "0").strip(),
+            "percentage": form.get("percentage", "0").strip(),
+            "percentage_of": form.get("percentage_of", "").strip(),
+            "formula": form.get("formula", "").strip(),
+            "sequence": form.get("sequence", "100").strip(),
+            "taxable": form.get("taxable", "No").strip(),
+            "description": form.get("description", "").strip(),
         }
         res = create_component(data)
         if res["status"] == "success":
@@ -145,7 +148,7 @@ def view_component(component_id):
 
 @salary_bp.route("/components/<component_id>/edit", methods=["GET", "POST"])
 @hr_required
-def edit_component(component_id):
+async def edit_component(component_id, request: Request):
     user = session["user"]
     comp = get_component_by_id(component_id)
     if not comp:
@@ -155,18 +158,19 @@ def edit_component(component_id):
     all_codes = [c for c in get_all_codes() if c != comp.get("code", "").upper()]
 
     if request.method == "POST":
+        form = await request.form()
         data = {
-            "name": request.form.get("name", "").strip(),
-            "code": request.form.get("code", "").strip(),
-            "category": request.form.get("category", "Earning").strip(),
-            "computation_type": request.form.get("computation_type", "Fixed").strip(),
-            "amount": request.form.get("amount", "0").strip(),
-            "percentage": request.form.get("percentage", "0").strip(),
-            "percentage_of": request.form.get("percentage_of", "").strip(),
-            "formula": request.form.get("formula", "").strip(),
-            "sequence": request.form.get("sequence", "100").strip(),
-            "taxable": request.form.get("taxable", "No").strip(),
-            "description": request.form.get("description", "").strip(),
+            "name": form.get("name", "").strip(),
+            "code": form.get("code", "").strip(),
+            "category": form.get("category", "Earning").strip(),
+            "computation_type": form.get("computation_type", "Fixed").strip(),
+            "amount": form.get("amount", "0").strip(),
+            "percentage": form.get("percentage", "0").strip(),
+            "percentage_of": form.get("percentage_of", "").strip(),
+            "formula": form.get("formula", "").strip(),
+            "sequence": form.get("sequence", "100").strip(),
+            "taxable": form.get("taxable", "No").strip(),
+            "description": form.get("description", "").strip(),
         }
         res = update_component(component_id, data)
         if res["status"] == "success":
@@ -210,11 +214,11 @@ def remove_component(component_id):
 
 @salary_bp.route("/structures")
 @hr_required
-def list_structures():
+async def list_structures(request: Request):
     user = session["user"]
-    search = request.args.get("search", "").strip()
-    type_filter = request.args.get("type", "").strip()
-    active_filter = request.args.get("active", "").strip()
+    search = request.query_params.get("search", "").strip()
+    type_filter = request.query_params.get("type", "").strip()
+    active_filter = request.query_params.get("active", "").strip()
 
     structures = get_all_structures(
         active_only=(active_filter == "Yes"),
@@ -240,14 +244,15 @@ def list_structures():
 
 @salary_bp.route("/structures/new", methods=["GET", "POST"])
 @hr_required
-def new_structure():
+async def new_structure(request: Request):
     user = session["user"]
     if request.method == "POST":
+        form = await request.form()
         data = {
-            "name": request.form.get("name", "").strip(),
-            "structure_type": request.form.get("structure_type", "Employee").strip(),
-            "payroll_frequency": request.form.get("payroll_frequency", "Monthly").strip(),
-            "description": request.form.get("description", "").strip(),
+            "name": form.get("name", "").strip(),
+            "structure_type": form.get("structure_type", "Employee").strip(),
+            "payroll_frequency": form.get("payroll_frequency", "Monthly").strip(),
+            "description": form.get("description", "").strip(),
         }
         res = create_structure(data)
         if res["status"] == "success":
@@ -291,7 +296,7 @@ def view_structure(structure_id):
 
 @salary_bp.route("/structures/<structure_id>/edit", methods=["GET", "POST"])
 @hr_required
-def edit_structure(structure_id):
+async def edit_structure(structure_id, request: Request):
     user = session["user"]
     structure = get_structure_by_id(structure_id)
     if not structure:
@@ -299,11 +304,12 @@ def edit_structure(structure_id):
         return redirect(url_for("salary.list_structures"))
 
     if request.method == "POST":
+        form = await request.form()
         data = {
-            "name": request.form.get("name", "").strip(),
-            "structure_type": request.form.get("structure_type", "Employee").strip(),
-            "payroll_frequency": request.form.get("payroll_frequency", "Monthly").strip(),
-            "description": request.form.get("description", "").strip(),
+            "name": form.get("name", "").strip(),
+            "structure_type": form.get("structure_type", "Employee").strip(),
+            "payroll_frequency": form.get("payroll_frequency", "Monthly").strip(),
+            "description": form.get("description", "").strip(),
         }
         res = update_structure(structure_id, data)
         if res["status"] == "success":
@@ -331,8 +337,9 @@ def toggle_archive_structure(structure_id):
 
 @salary_bp.route("/structures/<structure_id>/components/add", methods=["POST"])
 @hr_required
-def add_component(structure_id):
-    component_id = request.form.get("component_id", "").strip()
+async def add_component(structure_id, request: Request):
+    form = await request.form()
+    component_id = form.get("component_id", "").strip()
     if not component_id:
         flash("Please select a component to add.", "warning")
         return redirect(url_for("salary.view_structure", structure_id=structure_id))
@@ -355,7 +362,7 @@ def remove_structure_component(structure_id, component_id):
 
 @salary_bp.route("/structures/<structure_id>/preview")
 @hr_required
-def salary_preview(structure_id):
+async def salary_preview(structure_id, request: Request):
     user = session["user"]
     structure = get_structure_by_id(structure_id)
     if not structure:
@@ -363,8 +370,8 @@ def salary_preview(structure_id):
         return redirect(url_for("salary.list_structures"))
 
     try:
-        basic = float(request.args.get("basic", 0))
-        gross = float(request.args.get("gross", 0))
+        basic = float(request.query_params.get("basic", 0))
+        gross = float(request.query_params.get("gross", 0))
     except (ValueError, TypeError):
         basic = 0.0
         gross = 0.0
@@ -385,11 +392,11 @@ def salary_preview(structure_id):
 
 @salary_bp.route("/structures/<structure_id>/preview/json")
 @hr_required
-def salary_preview_json(structure_id):
+async def salary_preview_json(structure_id, request: Request):
     """JSON API for AJAX-powered live preview updates."""
     try:
-        basic = float(request.args.get("basic", 0))
-        gross = float(request.args.get("gross", 0))
+        basic = float(request.query_params.get("basic", 0))
+        gross = float(request.query_params.get("gross", 0))
     except (ValueError, TypeError):
         basic = 0.0
         gross = 0.0

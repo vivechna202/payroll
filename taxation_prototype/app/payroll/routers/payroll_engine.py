@@ -2,7 +2,9 @@
 payroll_engine_routes.py - Enterprise Payroll Processing Engine (Batches)
 Routes for /hr/payroll-engine
 """
-from app.base.utils.flask_compat import Blueprint, render_template, request, redirect, url_for, flash, session
+from fastapi import Request
+
+from app.base.utils.flask_compat import Blueprint, render_template, redirect, url_for, flash, session
 from functools import wraps
 from datetime import datetime
 import json
@@ -37,8 +39,8 @@ def hr_required(f):
 
 @payroll_engine_bp.route("/")
 @hr_required
-def dashboard():
-    fy = request.args.get("fy", CURRENT_FY)
+async def dashboard(request: Request):
+    fy = request.query_params.get("fy", CURRENT_FY)
     stats = get_payroll_engine_dashboard(fy)
     batches = get_all_batches(fy=fy)
     return render_template(
@@ -52,12 +54,13 @@ def dashboard():
 
 @payroll_engine_bp.route("/batches/new", methods=["GET", "POST"])
 @hr_required
-def new_batch():
+async def new_batch(request: Request):
     if request.method == "POST":
-        month = int(request.form.get("month"))
-        year = int(request.form.get("year"))
-        fy = request.form.get("fy", CURRENT_FY)
-        description = request.form.get("description", "")
+        form = await request.form()
+        month = int(form.get("month"))
+        year = int(form.get("year"))
+        fy = form.get("fy", CURRENT_FY)
+        description = form.get("description", "")
         
         res = create_payroll_batch(month, year, fy, session["user"]["name"], description)
         if res.get("status") == "success":
@@ -193,13 +196,13 @@ def entry_detail(batch_id, payroll_id):
 
 @payroll_engine_bp.route("/employee/<employee_id>")
 @hr_required
-def employee_history(employee_id):
+async def employee_history(employee_id, request: Request):
     emp = get_employee_by_id(employee_id)
     if not emp:
         flash("Employee not found.", "danger")
         return redirect(url_for("payroll_engine.dashboard"))
         
-    fy = request.args.get("fy", CURRENT_FY)
+    fy = request.query_params.get("fy", CURRENT_FY)
     history = get_employee_payroll_history(employee_id, fy=fy)
     
     return render_template(

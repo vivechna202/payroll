@@ -5,7 +5,9 @@ Blueprint prefix: /hr/reports
 """
 
 import io
-from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify, send_file
+from fastapi import Request
+
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, jsonify, send_file
 from functools import wraps
 from app.base.utils.config import CURRENT_FY
 from app.payroll.services.payroll_reports_service import (
@@ -38,13 +40,13 @@ def hr_required(f):
     return decorated
 
 
-def _collect_filters():
+def _collect_filters(request: Request):
     return {
-        "fy": request.args.get("fy", CURRENT_FY),
-        "month": request.args.get("month", ""),
-        "department": request.args.get("department", ""),
-        "employee_id": request.args.get("employee_id", ""),
-        "batch_id": request.args.get("batch_id", ""),
+        "fy": request.query_params.get("fy", CURRENT_FY),
+        "month": request.query_params.get("month", ""),
+        "department": request.query_params.get("department", ""),
+        "employee_id": request.query_params.get("employee_id", ""),
+        "batch_id": request.query_params.get("batch_id", ""),
     }
 
 
@@ -63,9 +65,9 @@ def _common_ctx():
 
 @reports_bp.route("/dashboard")
 @hr_required
-def dashboard():
+async def dashboard(request: Request):
     user = session["user"]
-    filters = _collect_filters()
+    filters = _collect_filters(request)
     stats = get_dashboard_analytics(filters)
     ctx = _common_ctx()
     return render_template(
@@ -77,8 +79,8 @@ def dashboard():
 
 @reports_bp.route("/api/charts")
 @hr_required
-def api_charts():
-    filters = _collect_filters()
+async def api_charts(request: Request):
+    filters = _collect_filters(request)
     data = get_chart_data(filters)
     return jsonify(data)
 
@@ -89,10 +91,10 @@ def api_charts():
 
 @reports_bp.route("/payroll")
 @hr_required
-def payroll_report():
+async def payroll_report(request: Request):
     user = session["user"]
-    filters = _collect_filters()
-    report_type = request.args.get("report_type", "monthly_summary")
+    filters = _collect_filters(request)
+    report_type = request.query_params.get("report_type", "monthly_summary")
     ctx = _common_ctx()
 
     if report_type == "department":
@@ -124,12 +126,12 @@ STATUTORY_TITLES = {
 
 @reports_bp.route("/statutory/<component>")
 @hr_required
-def statutory_report(component):
+async def statutory_report(component, request: Request):
     if component not in STATUTORY_TITLES:
         flash("Invalid report type.", "danger")
         return redirect(url_for("reports.dashboard"))
     user = session["user"]
-    filters = _collect_filters()
+    filters = _collect_filters(request)
     ctx = _common_ctx()
     rows = get_statutory_report(component, filters)
     title = STATUTORY_TITLES[component]
@@ -154,10 +156,10 @@ EMPLOYEE_REPORT_TITLES = {
 
 @reports_bp.route("/employee")
 @hr_required
-def employee_report():
+async def employee_report(request: Request):
     user = session["user"]
-    filters = _collect_filters()
-    report_type = request.args.get("report_type", "salary_history")
+    filters = _collect_filters(request)
+    report_type = request.query_params.get("report_type", "salary_history")
     ctx = _common_ctx()
     title = EMPLOYEE_REPORT_TITLES.get(report_type, "Employee Report")
 
@@ -184,11 +186,11 @@ def employee_report():
 
 @reports_bp.route("/export")
 @hr_required
-def export():
-    fmt = request.args.get("format", "excel")
-    report = request.args.get("report", "monthly_summary")
-    component = request.args.get("component", "pf")
-    filters = _collect_filters()
+async def export(request: Request):
+    fmt = request.query_params.get("format", "excel")
+    report = request.query_params.get("report", "monthly_summary")
+    component = request.query_params.get("component", "pf")
+    filters = _collect_filters(request)
 
     # Choose data source
     if report == "department":
