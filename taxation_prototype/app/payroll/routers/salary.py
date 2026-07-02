@@ -5,7 +5,7 @@ Blueprint prefix: /hr/salary
 All routes are HR-only.
 """
 
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify
 from functools import wraps
 
 from app.base.utils.config import CURRENT_FY

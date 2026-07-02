@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from app.base.utils.flask_compat import Blueprint, render_template, request, redirect, url_for, flash
 from app.payroll.services import statutory_service
 
 statutory_bp = Blueprint("statutory", __name__, url_prefix="/statutory")

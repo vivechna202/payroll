@@ -1,5 +1,5 @@
 import io
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, session
+from app.base.utils.flask_compat import Blueprint, render_template, request, redirect, url_for, flash, send_file, session
 from app.payroll.services import payslip_service
 from app.payroll.services import payroll_service
 from app.base.utils.config import CURRENT_FY

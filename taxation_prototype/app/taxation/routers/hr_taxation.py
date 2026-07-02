@@ -1,5 +1,5 @@
 """HR taxation routes (TDS, proofs, declarations, Form 16/24Q, challans)."""
-from flask import render_template, session, redirect, url_for, flash, request, send_file, jsonify, make_response
+from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, request, send_file, jsonify, make_response
 from datetime import date
 import io
 import os
@@ -251,7 +251,7 @@ def run_fvu():
 @hr_required
 def download_form24q(filename):
     import os
-    from flask import send_from_directory
+    from app.base.utils.flask_compat import send_from_directory
     from app.base.utils.config import FORM24Q_FOLDER
     file_path = os.path.join(FORM24Q_FOLDER, filename)
     if not os.path.exists(file_path):
@@ -324,7 +324,7 @@ def challan_details():
 @hr_required
 def challans_list():
     from app.taxation.services.challan_service import get_all_challans
-    from flask import jsonify, make_response
+    from app.base.utils.flask_compat import jsonify, make_response
     try:
         challans = get_all_challans()
         response = make_response(jsonify(challans))
@@ -339,7 +339,7 @@ def challans_list():
 @hr_required
 def challans_add():
     from app.taxation.services.challan_service import save_challan
-    from flask import jsonify, request
+    from app.base.utils.flask_compat import jsonify, request
     try:
         data = request.get_json() or {}
         result = save_challan(data)
@@ -353,7 +353,7 @@ def challans_add():
 @hr_required
 def challans_update(challan_id):
     from app.taxation.services.challan_service import edit_challan
-    from flask import jsonify, request
+    from app.base.utils.flask_compat import jsonify, request
     try:
         data = request.get_json() or {}
         result = edit_challan(challan_id, data)
@@ -367,7 +367,7 @@ def challans_update(challan_id):
 @hr_required
 def challans_delete(challan_id):
     from app.taxation.services.challan_service import delete_challan
-    from flask import jsonify
+    from app.base.utils.flask_compat import jsonify
     try:
         success = delete_challan(challan_id)
         if success:

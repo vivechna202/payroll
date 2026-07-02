@@ -1,6 +1,6 @@
 """Employee payslip and FNF routes."""
 import io
-from flask import render_template, session, redirect, url_for, flash, send_file
+from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, send_file
 from app.payroll.services import payslip_service
 from app.payroll.services.fnf_service import get_employee_settlements
 from app.base.routers.blueprints import employee_bp, employee_required

@@ -2,7 +2,7 @@
 ess_routes.py – Blueprints for Employee Self Service (ESS) & Manager Self Service (MSS).
 """
 
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request, abort
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request, abort
 from functools import wraps
 from app.base.utils.config import CURRENT_FY, CSV_EMPLOYEES, DUMMY_USERS
 from app.ess.services.ess_service import (

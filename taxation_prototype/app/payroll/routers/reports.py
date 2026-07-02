@@ -5,7 +5,7 @@ Blueprint prefix: /hr/reports
 """
 
 import io
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify, send_file
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify, send_file
 from functools import wraps
 from app.base.utils.config import CURRENT_FY
 from app.payroll.services.payroll_reports_service import (

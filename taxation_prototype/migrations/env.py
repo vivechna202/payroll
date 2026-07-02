@@ -18,7 +18,8 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from database.base import Base
+from app.base.utils.db import Base
+import app.payroll.models  # noqa: F401 — register ORM models for Alembic
 
 target_metadata = Base.metadata
 

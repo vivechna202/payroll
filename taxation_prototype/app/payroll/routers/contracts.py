@@ -3,7 +3,7 @@ contract_routes.py – Flask routes for the HR Employee Contracts module.
 Supports listing, viewing, creating, editing, and transitioning contracts.
 """
 
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request
 from functools import wraps
 import math
 

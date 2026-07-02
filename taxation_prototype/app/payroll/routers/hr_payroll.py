@@ -1,5 +1,5 @@
 """HR payroll routes (legacy processing + register)."""
-from flask import render_template, session, redirect, url_for, flash, request, send_file
+from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, request, send_file
 import io
 from datetime import date
 from app.base.utils.config import CURRENT_FY

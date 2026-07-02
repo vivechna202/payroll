@@ -23,10 +23,11 @@ import uuid
 import csv
 from datetime import datetime
 
-from flask import (
+from app.base.utils.flask_compat import (
     Blueprint, render_template, session, redirect, url_for,
-    flash, request, jsonify, send_file, abort
+    flash, request, jsonify, send_file, abort,
 )
+
 from functools import wraps
 
 from app.base.utils.config import (
@@ -55,19 +56,8 @@ form16_processing_bp = Blueprint(
 )
 
 
-@form16_processing_bp.before_request
-def _raise_upload_limit():
-    """Allow up to 50 MB uploads for Form 16 Processing (global limit is 5 MB)."""
-    from flask import current_app
-    current_app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
-
-
-@form16_processing_bp.after_request
-def _restore_upload_limit(response):
-    """Restore the global 5 MB limit after processing the request."""
-    from flask import current_app
-    current_app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
-    return response
+# Note: before_request and after_request hooks are handled in the CompatRouter
+# The upload limit is managed at the FastAPI app level in main.py
 
 # ─────────────────────────────────────────────────────────────
 # Auth guard (HR-only) — mirrors hr_routes.py, not imported to
@@ -375,7 +365,7 @@ def download_merged(filename):
     Download a single merged Form 16 PDF.
     Filename must belong to the current session's output folder.
     """
-    from flask import send_from_directory
+    from app.base.utils.flask_compat import send_from_directory
     from app.base.utils.config import FORM16_MERGED_FOLDER
 
     processing_session_id = session.get(SESSION_ID_KEY)

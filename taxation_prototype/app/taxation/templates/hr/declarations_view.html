@@ -9,21 +9,21 @@
   <form method="GET" action="{{ url_for('hr.declarations') }}" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
     <div>
       <label class="form-label">Employee ID</label>
-      <input type="text" name="employee_id" value="{{ request.args.get('employee_id', '') }}" class="form-input" placeholder="e.g. EMP001" />
+      <input type="text" name="employee_id" value="{{ request.query_params.get('employee_id', '') }}" class="form-input" placeholder="e.g. EMP001" />
     </div>
     <div>
       <label class="form-label">Financial Year</label>
       <select name="fy" class="form-input">
         <option value="">All Years</option>
-        <option value="{{ fy }}" {% if request.args.get('fy') == fy %}selected{% endif %}>{{ fy }}</option>
+        <option value="{{ fy }}" {% if request.query_params.get('fy') == fy %}selected{% endif %}>{{ fy }}</option>
       </select>
     </div>
     <div>
       <label class="form-label">Status</label>
       <select name="status" class="form-input">
         <option value="">All</option>
-        <option value="DRAFT" {% if request.args.get('status') == 'DRAFT' %}selected{% endif %}>DRAFT</option>
-        <option value="SUBMITTED" {% if request.args.get('status') == 'SUBMITTED' %}selected{% endif %}>SUBMITTED</option>
+        <option value="DRAFT" {% if request.query_params.get('status') == 'DRAFT' %}selected{% endif %}>DRAFT</option>
+        <option value="SUBMITTED" {% if request.query_params.get('status') == 'SUBMITTED' %}selected{% endif %}>SUBMITTED</option>
       </select>
     </div>
     <div>

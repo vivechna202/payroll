@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request
 from functools import wraps
 from app.base.utils.config import CURRENT_FY
 from app.payroll.services.fnf_service import (

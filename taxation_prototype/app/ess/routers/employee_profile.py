@@ -1,5 +1,5 @@
 """Employee profile route (shared ESS)."""
-from flask import render_template, session, redirect, url_for, flash, request
+from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, request
 from app.base.utils.config import CSV_EMPLOYEES, CURRENT_FY
 from app.base.utils.csv_service import read_csv_row
 from app.payroll.services.contract_service import get_active_contract, get_contracts_for_employee

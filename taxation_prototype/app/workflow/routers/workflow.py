@@ -3,7 +3,7 @@ workflow_routes.py – Blueprints for workflows and notifications.
 """
 
 import json
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request, abort, jsonify
+from app.base.utils.flask_compat import Blueprint, render_template, session, redirect, url_for, flash, request, abort, jsonify
 from functools import wraps
 from app.base.utils.config import CURRENT_FY
 from app.workflow.services.workflow_service import (
@@ -48,17 +48,8 @@ def hr_required(f):
 # ─────────────────────────────────────────────────────────────
 # Context Processor for Badge counts
 # ─────────────────────────────────────────────────────────────
-
-@notifications_bp.app_context_processor
-def inject_notifications_badge():
-    if "user" in session:
-        user = session["user"]
-        # HR gets both their employee ID notifications and general 'hr' notifications
-        count = get_unread_count(user["employee_id"])
-        if user["role"] == "hr":
-            count += get_unread_count("hr")
-        return {"unread_notifications_count": count}
-    return {"unread_notifications_count": 0}
+# Note: app_context_processor is handled in the CompatRouter's _template_context function
+# in flask_compat.py. The notification badge count is already injected there.
 
 
 # ─────────────────────────────────────────────────────────────

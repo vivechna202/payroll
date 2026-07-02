@@ -1,5 +1,5 @@
 """Employee taxation routes."""
-from flask import render_template, session, redirect, url_for, flash, request, send_from_directory, send_file, abort
+from app.base.utils.flask_compat import render_template, session, redirect, url_for, flash, request, send_from_directory, send_file, abort
 import os
 import csv
 from app.base.utils.config import CSV_EMPLOYEES, CSV_DECLARATIONS, CSV_FORM16_HISTORY, CURRENT_FY, CSV_FORM16_APPROVED, FORM16_FOLDER, FORM16_SIGNED_FOLDER
@@ -169,7 +169,7 @@ def form16_download():
 @employee_required
 def download_form16(filename):
     import os
-    from flask import send_from_directory, abort
+    from app.base.utils.flask_compat import send_from_directory, abort
     from app.base.utils.config import FORM16_FOLDER
     
     user = session["user"]
@@ -198,7 +198,7 @@ def download_approved_form16(filename):
     Only accessible to the employee whose PAN matches the approval record.
     """
     import os
-    from flask import send_file, abort, flash, redirect, url_for
+    from app.base.utils.flask_compat import send_file, abort, flash, redirect, url_for
     from app.base.utils.config import FORM16_SIGNED_FOLDER
     from app.base.utils.csv_service import read_csv_row
     

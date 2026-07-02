@@ -2,7 +2,7 @@
 payroll_engine_routes.py - Enterprise Payroll Processing Engine (Batches)
 Routes for /hr/payroll-engine
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from app.base.utils.flask_compat import Blueprint, render_template, request, redirect, url_for, flash, session
 from functools import wraps
 from datetime import datetime
 import json
